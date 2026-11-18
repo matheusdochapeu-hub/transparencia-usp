@@ -129,6 +129,8 @@ Não há etapa de build para o front-end: é HTML/CSS/JS puro (ES modules), sem 
 
 ## Empregos públicos e vagas técnico-administrativas
 
+![Aba Vagas TA — estimativas por unidade, campus e classe](assets/preview-vagas-ta.png)
+
 A USP aloca **empregos públicos** (CLT, criados pela LC 1.074/2008) por portaria no D.O.E.
 O script `scripts/extract_doe.py` baixa esse acervo — portal `doe.sp.gov.br` para 2023+,
 PDFs da Imprensa Oficial para 2009–2022 e o índice anual da Normas USP como fonte
