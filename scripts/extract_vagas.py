@@ -181,7 +181,8 @@ def fetch_t214(year: int):
             continue
         if not unidade or not cat:
             continue
-        rows.append([tipo, unidade, cat, total])
+        sexo = str(sh.cell_value(r, cols["sexpes"])).strip() if "sexpes" in cols else ""
+        rows.append([tipo, unidade, cat, total, sexo])
     return {"year": year, "rows": rows, "fetchedAt": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
 

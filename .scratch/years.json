@@ -1,0 +1,141 @@
+{
+ "2009": {
+  "html": 426846,
+  "links": 1,
+  "unique": 1,
+  "entries": 459,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2010": {
+  "html": 224781,
+  "links": 1,
+  "unique": 1,
+  "entries": 156,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2011": {
+  "html": 423730,
+  "links": 1,
+  "unique": 1,
+  "entries": 589,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2012": {
+  "html": 500689,
+  "links": 1,
+  "unique": 1,
+  "entries": 454,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2013": {
+  "erro": "HTTP Error 404: Not Found"
+ },
+ "2014": {
+  "html": 163094,
+  "links": 1,
+  "unique": 1,
+  "entries": 97,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2015": {
+  "html": 184038,
+  "links": 1,
+  "unique": 1,
+  "entries": 78,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2016": {
+  "html": 146842,
+  "links": 1,
+  "unique": 1,
+  "entries": 59,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2017": {
+  "html": 172508,
+  "links": 1,
+  "unique": 1,
+  "entries": 155,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2018": {
+  "html": 164638,
+  "links": 1,
+  "unique": 1,
+  "entries": 210,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2019": {
+  "html": 159238,
+  "links": 1,
+  "unique": 1,
+  "entries": 154,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2020": {
+  "html": 144147,
+  "links": 1,
+  "unique": 1,
+  "entries": 73,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2021": {
+  "html": 102623,
+  "links": 1,
+  "unique": 1,
+  "entries": 8,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2022": {
+  "html": 125693,
+  "links": 1,
+  "unique": 1,
+  "entries": 37,
+  "withlink": 0,
+  "uniqueUrls": 0
+ },
+ "2023": {
+  "html": 202980,
+  "links": 36,
+  "unique": 27,
+  "entries": 144,
+  "withlink": 11,
+  "uniqueUrls": 9
+ },
+ "2024": {
+  "html": 198918,
+  "links": 340,
+  "unique": 251,
+  "entries": 117,
+  "withlink": 108,
+  "uniqueUrls": 90
+ },
+ "2025": {
+  "html": 197307,
+  "links": 347,
+  "unique": 313,
+  "entries": 121,
+  "withlink": 121,
+  "uniqueUrls": 117
+ },
+ "2026": {
+  "html": 135842,
+  "links": 177,
+  "unique": 176,
+  "entries": 82,
+  "withlink": 82,
+  "uniqueUrls": 81
+ }
+}

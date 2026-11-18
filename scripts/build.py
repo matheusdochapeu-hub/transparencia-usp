@@ -234,6 +234,7 @@ def build_tecnicos() -> dict | None:
     data: dict[str, dict[str, dict[str, int]]] = {}
     unit_tipo: dict[str, str] = {}
     totals: dict[str, dict[str, int]] = {}
+    sex_career: dict[str, dict[str, dict[str, dict[str, int]]]] = {}
     for name in files:
         snap = read_json(os.path.join(vdir, name))
         if not snap:
@@ -241,7 +242,9 @@ def build_tecnicos() -> dict | None:
         year = int(snap["year"])
         years.append(year)
         key = str(year)
-        for tipo, unidade, categoria, total in snap["rows"]:
+        for row in snap["rows"]:
+            tipo, unidade, categoria, total = row[0], row[1], row[2], row[3]
+            sexo = row[4] if len(row) > 4 else ""
             unidade = re.sub(r"\s+", "", unidade)
             unidade = UNIT_ALIAS.get(unidade, unidade)
             cat = CAT_MAP.get(categoria)
@@ -252,6 +255,11 @@ def build_tecnicos() -> dict | None:
             unit_tipo.setdefault(unidade, tipo)
             tot = totals.setdefault(key, {"bas": 0, "tec": 0, "sup": 0, "out": 0})
             tot[cat] += total
+            if sexo:
+                sk = "f" if str(sexo).lower().startswith("f") else ("m" if str(sexo).lower().startswith("m") else "")
+                if sk:
+                    sc = sex_career.setdefault(unidade, {}).setdefault(key, {}).setdefault(cat, {"f": 0, "m": 0})
+                    sc[sk] += total
 
     campus_agg: dict[str, dict[str, dict[str, int]]] = {}
     units_meta = []
@@ -300,6 +308,7 @@ def build_tecnicos() -> dict | None:
     # ---- raça/cor por unidade (T2.20, 2020+) -------------------------------
     race: dict[str, dict[str, dict[str, int]]] = {}
     race_totals: dict[str, dict[str, int]] = {}
+    race_career: dict[str, dict[str, dict[str, dict[str, int]]]] = {}
     empty_race = lambda: {"bran": 0, "pret": 0, "pard": 0, "amar": 0, "indig": 0, "ni": 0}  # noqa: E731
     for name in sorted((f for f in os.listdir(vdir) if re.fullmatch(r"T2\.20-\d{4}\.json", f)), key=lambda f: int(f[6:10])):
         snap = read_json(os.path.join(vdir, name))
@@ -313,16 +322,21 @@ def build_tecnicos() -> dict | None:
                 continue
             race.setdefault(unidade, {}).setdefault(y, empty_race())[rk] += total
             race_totals.setdefault(y, empty_race())[rk] += total
+            ck = CAT_MAP.get(str(cat).strip()) or "out"
+            rc = race_career.setdefault(unidade, {}).setdefault(y, {}).setdefault(ck, empty_race())
+            rc[rk] += total
 
     if sex:
         payload["sex"] = sex
         payload["sexTotals"] = sex_totals
+        payload["sexCareer"] = sex_career
     if race:
         payload["race"] = race
         payload["raceTotals"] = race_totals
+        payload["raceCareer"] = race_career
 
-    # agrega sexo/raça por campus
-    for field, agg_key in (("sex", "sexCampus"), ("race", "raceCampus")):
+    # agrega sexo/raça por campus (inclusive por carreira)
+    for field, agg_key in (("sex", "sexCampus"), ("race", "raceCampus"), ("sexCareer", "sexCareerCampus"), ("raceCareer", "raceCareerCampus")):
         if field not in payload:
             continue
         base = payload[field]
@@ -332,9 +346,14 @@ def build_tecnicos() -> dict | None:
             if not vals:
                 continue
             for y, v in vals.items():
-                dest = agg.setdefault(u["campus"], {}).setdefault(y, {k: 0 for k in v})
+                dest = agg.setdefault(u["campus"], {}).setdefault(y, {})
                 for k, n in v.items():
-                    dest[k] += n
+                    if isinstance(n, dict):
+                        d2 = dest.setdefault(k, {kk: 0 for kk in n})
+                        for kk, nn in n.items():
+                            d2[kk] += nn
+                    else:
+                        dest[k] = dest.get(k, 0) + n
         payload[agg_key] = agg
     write_if_changed(os.path.join(OUT, "tecnicos.json"), payload)
     last = str(years[-1])

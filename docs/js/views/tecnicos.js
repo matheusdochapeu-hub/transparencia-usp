@@ -85,7 +85,7 @@ export async function render(el) {
     ${pageHead({
       eyebrow: `Anuário Estatístico · Tabelas 2.14, 2.16 e 2.20`,
       title: scoped ? `Servidores · ${esc(scopeName)}` : 'Servidores',
-      lead: 'Quadro <b>efetivo</b> da carreira técnico-administrativa: <b>Básico</b>, <b>Técnico</b> e <b>Superior</b> (analistas), além de <b>sexo</b> e <b>raça/cor</b>. A USP não publica cargos em vacância para esta carreira.',
+      lead: 'Quadro <b>efetivo</b> da carreira técnico-administrativa: <b>Básico</b>, <b>Técnico</b> e <b>Superior</b> (analistas), com composição por <b>sexo</b>, <b>raça/cor</b>, <b>faixa etária</b>, <b>nacionalidade</b> e <b>tempo USP</b>. A USP não publica cargos em vacância para esta carreira.',
       actions: `<a class="btn" href="#/vacancia">Vacância (docentes)</a><a class="btn" href="${tec.sourceUrl}" target="_blank" rel="noopener">Fonte: Anuário USP ↗</a>`,
     })}
 
@@ -119,20 +119,19 @@ export async function render(el) {
         <div class="legend" id="cLegend"></div>
       </div>
       <div class="card">
-        <div class="card-head"><div><h3>Sexo</h3><p id="sexSub"></p></div></div>
-        <div id="sexDonut"></div>
-        <div id="sexTrend" style="margin-top:8px"></div>
-      </div>
-    </div>
-
-    <div class="section card">
-      <div class="card-head"><div><h3>Raça/cor</h3><p id="raceSub"></p></div></div>
-      <div class="split even" style="align-items:start">
-        <div id="raceBars"></div>
-        <div>
-          <div id="raceTrend"></div>
-          <p class="hint" style="margin-top:8px">A série de raça/cor começa em ${raceYears[0] || '—'} (Tabela 2.20).</p>
+        <div class="card-head">
+          <div><h3>Composição</h3><p id="compSub"></p></div>
+          <div class="spacer"></div>
+          <select id="dimSel" aria-label="Dimensão da composição">
+            <option value="sexo">Sexo</option>
+            <option value="raca">Raça/cor</option>
+            <option value="faixa">Faixa etária</option>
+            <option value="nacionalidade">Nacionalidade</option>
+            <option value="tempo">Tempo USP</option>
+          </select>
         </div>
+        <div id="compChart"></div>
+        <div id="compTrend" style="margin-top:6px"></div>
       </div>
     </div>
 
@@ -173,44 +172,111 @@ export async function render(el) {
       st.career = v;
       drawCareer();
       drawTable();
+      drawComposition();
     }
   });
 
-  /* ---------------------------------------------------------- sexo */
-  const sexBox = el.querySelector('#sexDonut');
-  if (sexLast && sexLast.f + sexLast.m > 0) {
-    el.querySelector('#sexSub').textContent = `${last} · ${fmtPct(pctF(sexLast))} mulheres`;
-    donut(sexBox, {
-      items: [
-        { label: 'Mulheres', value: sexLast.f, color: 'var(--c6)' },
-        { label: 'Homens', value: sexLast.m, color: 'var(--c2)' },
-      ],
-      size: 150,
-      thickness: 20,
-      centerLabel: 'servidores',
-      fmt: fmtInt,
-    });
-    const trend = sexYears.map((y) => pctF(aggSex(y)));
-    const d = pctF(sexLast) - (sexFirst ? pctF(sexFirst) : pctF(sexLast));
-    el.querySelector('#sexTrend').innerHTML = `<p class="hint">Mulheres: <b>${fmtPct(pctF(sexLast))}</b> em ${last} · ${fmtSigned(+d.toFixed(1))} p.p. desde ${sexYears[0]}</p>`;
-  } else {
-    sexBox.innerHTML = '<div class="empty">Sem dados de sexo neste recorte.</div>';
-  }
+  /* ------------------------------------------------------ composição */
+  const DIMS = {
+    sexo: { label: 'Sexo' },
+    raca: { label: 'Raça/cor' },
+    faixa: { label: 'Faixa etária', slug: 'faixa-etaria' },
+    nacionalidade: { label: 'Nacionalidade', slug: 'nacionalidade' },
+    tempo: { label: 'Tempo USP', slug: 'tempo-usp' },
+  };
+  st.dim = 'sexo';
 
-  /* ---------------------------------------------------------- raça */
-  const raceBox = el.querySelector('#raceBars');
-  if (raceLast && sumObj(raceLast) > 0) {
-    const total = sumObj(raceLast);
-    el.querySelector('#raceSub').textContent = `${last} · ${fmtPct(pctPP(raceLast))} pretos+pardos`;
-    hBars(raceBox, {
-      items: RACAS.map((r) => ({ label: r.name, value: raceLast[r.key] || 0, color: r.color })),
-      fmt: (v) => `${fmtInt(v)} (${fmtPct((v / total) * 100)})`,
-    });
-    const d = pctPP(raceLast) - (raceFirst ? pctPP(raceFirst) : pctPP(raceLast));
-    el.querySelector('#raceTrend').innerHTML = `<p class="hint">Pretos + pardos: <b>${fmtPct(pctPP(raceLast))}</b> em ${last} · ${fmtSigned(+d.toFixed(1))} p.p. desde ${raceYears[0]}</p>`;
-  } else {
-    raceBox.innerHTML = '<div class="empty">Sem dados de raça/cor neste recorte.</div>';
+  const careerName = () => (CARREIRAS.find((c) => c.key === st.career) || {}).name || '';
+  const aggCareerKind = (field, y, base) =>
+    scopedUnits.reduce((a, u) => {
+      const v = ((tec[field] || {})[u.sigla] || {})[y];
+      if (!v) return a;
+      const s = v[st.career] || {};
+      for (const k of Object.keys(a)) a[k] += s[k] || 0;
+      return a;
+    }, { ...base });
+
+  async function drawComposition() {
+    const box = el.querySelector('#compChart');
+    const sub = el.querySelector('#compSub');
+    const trend = el.querySelector('#compTrend');
+    if (!box) return;
+    trend.innerHTML = '';
+    const dim = st.dim;
+
+    if (dim === 'sexo') {
+      const s = st.career === 'all' ? sexLast : aggCareerKind('sexCareer', last, { f: 0, m: 0 });
+      if (!s || s.f + s.m === 0) {
+        box.innerHTML = '<div class="empty">Sem dados de sexo neste recorte.</div>';
+        sub.textContent = '';
+        return;
+      }
+      sub.textContent = `Sexo · ${last}${st.career !== 'all' ? ` · ${careerName()}` : ''}`;
+      donut(box, {
+        items: [
+          { label: 'Mulheres', value: s.f, color: 'var(--c6)' },
+          { label: 'Homens', value: s.m, color: 'var(--c2)' },
+        ],
+        size: 150,
+        thickness: 20,
+        centerLabel: 'servidores',
+        fmt: fmtInt,
+      });
+      const d = st.career === 'all' && sexFirst ? pctF(s) - pctF(sexFirst) : null;
+      trend.innerHTML = `<p class="hint">Mulheres: <b>${fmtPct(pctF(s))}</b>${d != null ? ` · ${fmtSigned(+d.toFixed(1))} p.p. desde ${sexYears[0]}` : ''}</p>`;
+      return;
+    }
+
+    if (dim === 'raca') {
+      const empty = { bran: 0, pret: 0, pard: 0, amar: 0, indig: 0, ni: 0 };
+      const r = st.career === 'all' ? raceLast : aggCareerKind('raceCareer', last, empty);
+      if (!r || sumObj(r) === 0) {
+        box.innerHTML = '<div class="empty">Sem dados de raça/cor neste recorte.</div>';
+        sub.textContent = '';
+        return;
+      }
+      const total = sumObj(r);
+      sub.textContent = `Raça/cor · ${last}${st.career !== 'all' ? ` · ${careerName()}` : ''} · ${fmtPct(pctPP(r))} pretos+pardos`;
+      hBars(box, {
+        items: RACAS.map((x) => ({ label: x.name, value: r[x.key] || 0, color: x.color })),
+        fmt: (v) => `${fmtInt(v)} (${fmtPct((v / total) * 100)})`,
+      });
+      const d = st.career === 'all' && raceFirst ? pctPP(r) - pctPP(raceFirst) : null;
+      trend.innerHTML = `<p class="hint">Pretos + pardos: <b>${fmtPct(pctPP(r))}</b>${d != null ? ` · ${fmtSigned(+d.toFixed(1))} p.p. desde ${raceYears[0]}` : ''}</p>`;
+      return;
+    }
+
+    // dimensões mensais do Portal (faixa etária, nacionalidade, tempo USP)
+    const cfg = DIMS[dim];
+    try {
+      const c = await store.category(cfg.slug);
+      const ri = c.n - 1;
+      const items = c.labels
+        .map((lab, li) => ({ label: lab, value: c.m.tec[li][ri] }))
+        .filter((x) => x.value > 0)
+        .sort((a, b) => b.value - a.value);
+      const top = items.slice(0, 10);
+      const rest = items.slice(10).reduce((a, x) => a + x.value, 0);
+      if (rest > 0) top.push({ label: 'Outros', value: rest });
+      const total = top.reduce((a, x) => a + x.value, 0) || 1;
+      sub.textContent = `${cfg.label} · ${store.refLabels[ri]}${st.career !== 'all' ? ' · total (sem corte por carreira)' : ''}`;
+      hBars(box, {
+        items: top.map((x) => ({ ...x, color: 'var(--c2)' })),
+        fmt: (v) => `${fmtInt(v)} (${fmtPct((v / total) * 100)})`,
+      });
+      if (st.career !== 'all') {
+        trend.innerHTML = '<p class="hint">Faixa etária, nacionalidade e tempo USP vêm da consulta mensal do Portal — sem abertura por carreira (B/T/S).</p>';
+      }
+    } catch (e) {
+      box.innerHTML = '<div class="empty">Dados indisponíveis neste recorte.</div>';
+      sub.textContent = '';
+    }
   }
+  await drawComposition();
+  el.querySelector('#dimSel').addEventListener('change', (e) => {
+    st.dim = e.target.value;
+    drawComposition();
+  });
 
   /* ---------------------------------------------------------- tabela */
   const unitSel = el.querySelector('#unitSel');
