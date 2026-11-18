@@ -25,7 +25,7 @@ export async function render(el) {
     },
     {
       q: 'Posso ver os dados de uma unidade ou campus específico?',
-      a: `Sim. O seletor no topo (<b>USP (geral) → Campus → Unidades</b>) filtra o painel inteiro: panorama, categorias, comparador de períodos e ranking de mudanças passam a refletir só aquele recorte. Os <b>campi</b> têm histórico completo (2015–2026); as <b>unidades</b> têm os últimos 24 meses. O recorte também fica no link: <code>?scope=campus-10</code> ou <code>?scope=unit-EACH</code>.`,
+      a: `Sim. O seletor no topo (<b>USP → Campus → Unidades</b>) filtra o painel inteiro: panorama, categorias, comparador de períodos e ranking de mudanças passam a refletir só aquele recorte. Os <b>campi</b> têm histórico completo (2015–2026); as <b>unidades</b> têm os últimos 24 meses. O recorte também fica no link: <code>?scope=campus-10</code> ou <code>?scope=unit-EACH</code>.`,
     },
     {
       q: 'Dá para saber quantos cargos estão vagos (em vacância) por campus?',

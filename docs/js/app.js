@@ -100,7 +100,7 @@ function fillScopeSelect() {
       const list = byCampus.get(c.name) || [];
       byCampus.delete(c.name);
       return `<optgroup label="${esc(c.name)}">
-        <option value="${esc(c.key)}">${esc(c.name)} · campus (agregado)</option>
+        <option value="${esc(c.key)}">${esc(c.name)} · Campus</option>
         ${opts(list)}
       </optgroup>`;
     })
@@ -110,7 +110,7 @@ function fillScopeSelect() {
     .map(([c, list]) => `<optgroup label="${esc(c || 'Outros')}">${opts(list)}</optgroup>`)
     .join('');
 
-  sel.innerHTML = `<option value="usp">USP (geral)</option>${groups}${rest}`;
+  sel.innerHTML = `<option value="usp">USP</option>${groups}${rest}`;
   sel.value = store.scopeKey;
   sel.addEventListener('change', async () => {
     sel.disabled = true;

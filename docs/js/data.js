@@ -95,7 +95,7 @@ export const store = {
   },
 
   get scopeLabel() {
-    return this.isGlobal ? 'USP (geral)' : `${this._scopeData.name} · ${this._scopeData.type === 'campus' ? 'campus' : 'unidade'}`;
+    return this.isGlobal ? 'USP' : `${this._scopeData.name} · ${this._scopeData.type === 'campus' ? 'Campus' : 'Unidade'}`;
   },
 
   get refs() {

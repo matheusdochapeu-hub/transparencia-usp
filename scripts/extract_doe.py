@@ -62,7 +62,7 @@ CACHE = os.path.join(DOE, "cache")
 DRH = "https://drh.usp.br/biblioteca-drh/legislacao/diario-oficial-do-estado/d-o-e-{year}/"
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
-FILTER = re.compile(r"emprego\s+p[úu]blico", re.I)
+FILTER = re.compile(r"emprego", re.I)  # a página parseada decide o que é emprego público
 SECURE = ssl.create_default_context()
 INSECURE = ssl.create_default_context()
 INSECURE.check_hostname = False
@@ -229,11 +229,13 @@ def group_pages(entries):
 
 # ------------------------------------------------------------- renderização
 
-def render_spa(url: str, refresh: bool = False) -> str:
+def render_spa(url: str, refresh: bool = False, offline: bool = False) -> str:
     key = sha(url)
     for path in (cache_path("spa", key, ".html"), legacy_spa_path(key)):
         if os.path.exists(path) and not refresh:
             return open(path, encoding="utf-8", errors="replace").read()
+    if offline:
+        raise RuntimeError("página não está no cache (offline)")
     path = cache_path("spa", key, ".html")
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="chr-")
@@ -264,12 +266,14 @@ def pdf_from_viewer(html_text: str, viewer_url: str):
     return urllib.parse.urljoin(viewer_url, src)
 
 
-def download_pdf(urls, refresh: bool = False) -> str:
+def download_pdf(urls, refresh: bool = False, offline: bool = False) -> str:
     """Baixa (ou lê do cache) o PDF da página e devolve o texto extraído."""
     key = sha(pdf_page_key(urls[0]))
     txt_path = cache_path("txt", key, ".txt")
     if os.path.exists(txt_path) and not refresh:
         return open(txt_path, encoding="utf-8", errors="replace").read()
+    if offline:
+        raise RuntimeError("página não está no cache (offline)")
 
     raw = None
     errors = []
@@ -299,17 +303,18 @@ def download_pdf(urls, refresh: bool = False) -> str:
     os.makedirs(os.path.dirname(txt_path), exist_ok=True)
     open(txt_path, "w", encoding="utf-8").write(text)
     pdf_path = cache_path("pdf", key, ".pdf")
+    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
     open(pdf_path, "wb").write(raw)
     return text
 
 
-def load_page(group, refresh: bool = False):
+def load_page(group, refresh: bool = False, offline: bool = False):
     """Devolve (texto, erro) para uma página, usando cache quando possível."""
     try:
         if group["kind"] == "spa":
-            text = strip_tags(render_spa(group["urls"][0], refresh=refresh))
+            text = strip_tags(render_spa(group["urls"][0], refresh=refresh, offline=offline))
         else:
-            text = download_pdf(group["urls"], refresh=refresh)
+            text = download_pdf(group["urls"], refresh=refresh, offline=offline)
         return text, None
     except Exception as exc:  # noqa: BLE001
         return "", str(exc)
@@ -320,20 +325,23 @@ def load_page(group, refresh: bool = False):
 PORT_HEADER = re.compile(
     r"(?i)\bportaria\s+(?P<meta>[a-zçãõáéíóúâêôà ]{0,24}?)\s*[-–]?\s*"
     r"(?:n[º°o]\.?\s*)?(?P<num>\d[\d.]{2,8})\s*,\s*(?:de\s+)?"
-    r"(?P<data>\d{1,2}[-./]\d{1,2}[-./]\d{2,4}|\d{1,2}\s+de\s+[a-zçãõáéíóúâêô]+\s+de\s+\d{4})"
+    r"(?P<data>\d{1,2}[-./]\d{1,2}[-./]\d{2,4}"
+    r"|\d{1,2}(?:\s+de\s+\d{1,2})?\s+de\s+[a-zçãõáéíóúâêô]+\s+de\s+\d{4})"
 )
 
 DIST = re.compile(
     r"(?i)distribu[íi]d[oa]s?\s*,?\s+(?:junto\s+)?"
     r"(?:aos?|às?|à|ao|as?|nos?|nas?|na|no|para\s+a|para\s+o)\s+"
     r"(?P<unit>.+?)\s*,?\s*(?P<qtd>\d{1,3})\s*"
-    r"(?:\((?P<qtdw>[^)]{1,60})\))?\s*(?:emprego|empregos)\s+p[úu]blico"
+    r"(?:\((?P<qtdw>[^)]{1,60})\))?\s*(?:emprego|empregos)\s+p[úu]blicos?"
 )
 
 ROW = re.compile(
     r"(?i)\b(?P<classe>b[áa]sico|t[ée]cnico|superior)\s+"
-    r"(?P<letra>[a-z]{1,2}\d{0,2}|[ivx]{1,4})\s+"
-    r"(?P<grau>[a-z])\s+(?P<qtd>\d{1,3})\b"
+    r"(?P<letra>[a-z]{1,2}\d{0,2}|[ivx]{1,4}|\d{1,2})\s+"
+    r"(?P<grau>[a-z])\s+"
+    r"(?:(?P<cat>[^\W\d_][^\d]{1,60}?)\s+)?"
+    r"(?P<qtd>\d{1,3})\b"
 )
 
 MOV = re.compile(
@@ -341,7 +349,16 @@ MOV = re.compile(
     r"(?:a\s+|o\s+|à\s+|ao\s+)?(?P<para>.+?)(?:\.|;|$)"
 )
 
-EMP_NUM = re.compile(r"(?i)emprego\s+p[úu]blico\s+(\d{6,7})")
+EMP_NUM = re.compile(r"(?i)empregos?\s+p[úu]blicos?\s+(\d{6,7})")
+
+REF_BEFORE = re.compile(
+    r"(?i)(?:pela|pelo|pelas|pelos|da|do|das|dos|conforme|nos\s+termos\s+d[ao])\s+(?:a\s+|o\s+)?$"
+)
+
+
+def is_reference(text: str, start: int) -> bool:
+    """Evita tratar 'pela Portaria GR 4215, de 25/05/2009' como cabeçalho."""
+    return bool(REF_BEFORE.search(text[max(0, start - 45):start]))
 
 
 def parse_classe(text: str):
@@ -351,7 +368,7 @@ def parse_classe(text: str):
     classe = m.group(1).title()
     rest = text[m.end():]
     m2 = re.match(
-        r"\s*(?:classe\s*)?[-–]?\s*(?P<letra>[a-z]{1,2}\d{0,2}|[ivx]{1,4})\b"
+        r"\s*(?:classe\s*)?[-–]?\s*(?P<letra>[a-z]{1,2}\d{0,2}|[ivx]{1,4}|\d{1,2})\b"
         r"\s*[-–]?\s*(?P<grau>[a-z])?\b",
         rest, re.I,
     )
@@ -366,22 +383,30 @@ def clean_unit(raw: str) -> str:
         r"(?i)^(?:junto\s+)?(?:aos?|às?|à|ao|as?|nos?|nas?|na|no|de|da|do|das|dos|para\s+a|para\s+o)\s+",
         "", text,
     )
+    text = re.sub(r"\s*\([A-Za-z]{1,8}\)\s*$", "", text)  # sigla entre parênteses
     return text.strip(" ,.;:-–")
 
 
 def classify(ementa: str, body: str) -> str:
+    """Classifica a portaria pelo que ela efetivamente faz (não só pela ementa)."""
     low = ementa.lower()
-    if "redistribui" in low:
+    if "prorroga" in low:
+        return "outro"
+    if "cargo" in low and "emprego" not in low:
+        return "outro"
+    if not re.search(r"(?i)empregos?\s+p[úu]blicos?", body):
+        return "outro"
+    # movimento com origem e destino explícitos
+    if re.search(r"(?i)(?:redistribu|transfer)[íi]d[oa]s?\s+.{3,160}?\s+para\s+", body):
+        if re.search(r"(?i)\btransfer", low) or re.search(r"(?i)\btransfer", body):
+            return "transferencia"
         return "redistribuicao"
-    if "transfer" in low:
-        return "transferencia"
-    if "distribui" in low:
-        return "distribuicao"
-    if re.search(r"(?i)\bredistribu", body):
-        return "redistribuicao"
-    if re.search(r"(?i)\btransfer", body):
-        return "transferencia"
-    if re.search(r"(?i)\bdistribu", body):
+    # PROCONTES: muda o destinatário, não a unidade ("redistribuído conforme segue")
+    if re.search(r"(?i)(?:redistribu|transfer)[íi]d[oa]s?\s+conforme\s+segue", body):
+        return "destinacao"
+    if "procontes" in body.lower() or "destina" in low:
+        return "destinacao"
+    if re.search(r"(?i)\bdistribu[íi]d[oa]s?\b", body) or "distribui" in low:
         return "distribuicao"
     return "outro"
 
@@ -392,13 +417,19 @@ def parse_page(text: str, meta: dict):
     if not text:
         return portarias, notes
     text = re.sub(r"\s+", " ", text).strip()
-    starts = list(PORT_HEADER.finditer(text))
+    # PDFs quebram palavras com hífen no fim da linha ("Facul- dade")
+    text = re.sub(r"(?<=[a-zà-ú])-\s+(?=[a-zà-ú])", "", text)
+    starts = [m for m in PORT_HEADER.finditer(text) if not is_reference(text, m.start())]
     if not starts:
         return portarias, ["sem cabeçalho de portaria"]
 
     for i, m in enumerate(starts):
         end = starts[i + 1].start() if i + 1 < len(starts) else len(text)
         chunk = text[m.start():end]
+        data = to_iso(m.group("data"), meta.get("date", ""))
+        page_year = meta.get("year")
+        if data and page_year and abs(int(data[:4]) - int(page_year)) > 1:
+            continue  # citação a portaria de outro ano, não é cabeçalho
         rest = text[m.end():m.end() + 300]
         ementa = re.split(r"(?i)artigo\s+1", rest)[0].strip(" .;:-–")
         em = re.match(r"(?i)^[^.]{6,220}", ementa)
@@ -409,8 +440,9 @@ def parse_page(text: str, meta: dict):
             continue
 
         data = to_iso(m.group("data"), meta.get("date", ""))
+        sigla = re.sub(r"\s+", " ", m.group("meta")).strip().upper() or "GR"
         port = {
-            "sigla": re.sub(r"\s+", " ", m.group("meta")).strip().upper(),
+            "sigla": sigla,
             "numero": m.group("num"),
             "data": data,
             "ano": int(data[:4]) if data else meta.get("year"),
@@ -433,14 +465,14 @@ def parse_page(text: str, meta: dict):
             tabela = ROW.findall(seg)
             if not tabela:
                 cls, letra, grau = parse_classe(chunk)
-                tabela = [(cls, letra, grau, str(qtd_total))] if cls else []
+                tabela = [(cls, letra, grau, "", str(qtd_total))] if cls else []
             if not tabela:
                 notes.append(f"{port['sigla']} {port['numero']}: sem classe/letra")
                 continue
-            soma = sum(int(t[3]) for t in tabela)
+            soma = sum(int(t[4]) for t in tabela)
             if soma != qtd_total:
                 notes.append(f"{port['sigla']} {port['numero']}: tabela {soma} != prosa {qtd_total}")
-            for cls, letra, grau, qtd in tabela:
+            for cls, letra, grau, cat, qtd in tabela:
                 port["rows"].append({
                     "tipo": "distribuicao", "ano": port["ano"], "data": data,
                     "portaria": f"{port['sigla']} {port['numero']}".strip(),
@@ -448,22 +480,31 @@ def parse_page(text: str, meta: dict):
                     "emprego": "", "classe": cls, "letra": letra.upper(), "grau": grau.upper(),
                     "qtd": int(qtd), "unidade": unit_raw, "unidadeKey": key, "campus": campus,
                     "de": "", "para": unit_raw, "deKey": None, "paraKey": key,
+                    "categoria": re.sub(r"\s+", " ", cat).strip(" ,;") if cat else "",
                 })
         elif tipo in ("redistribuicao", "transferencia"):
             em = EMP_NUM.search(chunk)
+            num = em.group(1) if em else ""
+            pos = em.end() if em else 0
             if not em:
-                notes.append(f"{port['sigla']} {port['numero']}: redistribuição sem nº de emprego")
-                continue
-            num = em.group(1)
-            cls_txt = chunk[em.end():em.end() + 70]
-            cls_txt = re.match(r"\s*,?\s*([^,.;]{0,50})", cls_txt)
+                em2 = re.search(r"(?i)emprego\s+p[úu]blico", chunk)
+                pos = em2.end() if em2 else 0
+            cls_txt = re.match(r"\s*,?\s*([^,.;]{0,50})", chunk[pos:pos + 70]) if pos else None
             classe, letra, grau = parse_classe(cls_txt.group(1) if cls_txt else "")
             mv = MOV.search(chunk)
-            if not mv:
-                notes.append(f"{port['sigla']} {port['numero']}: sem origem/destino")
-                continue
-            de_raw = clean_unit(mv.group("de"))
-            para_raw = clean_unit(mv.group("para"))
+            if mv:
+                de_raw = clean_unit(mv.group("de"))
+                para_raw = clean_unit(mv.group("para"))
+            else:
+                mv2 = re.search(
+                    r"(?i)(?:redistribu|transfer)[íi]d[oa]s?\s+para\s+(?P<para>.+?)(?:\.|;|$)", chunk)
+                if not mv2:
+                    notes.append(f"{port['sigla']} {port['numero']}: sem origem/destino")
+                    continue
+                para_raw = clean_unit(mv2.group("para"))
+                om = re.search(
+                    r"(?i)distribu[íi]d[oa]s?\s+para\s+(?P<de>.+?)\s+pela\s+Portaria", chunk)
+                de_raw = clean_unit(om.group("de")) if om else ""
             de_key, de_name, _ = match_unit(de_raw)
             para_key, para_name, campus = match_unit(para_raw)
             port["rows"].append({
@@ -474,6 +515,29 @@ def parse_page(text: str, meta: dict):
                 "emprego": num, "classe": classe, "letra": letra, "grau": grau, "qtd": 1,
                 "unidade": para_raw, "unidadeKey": para_key, "campus": campus,
                 "de": de_raw, "para": para_raw, "deKey": de_key, "paraKey": para_key,
+            })
+        elif tipo == "destinacao":
+            # PROCONTES: o emprego não muda de unidade, muda de destinatário
+            em = EMP_NUM.search(chunk)
+            num = em.group(1) if em else ""
+            cls_txt = chunk[em.end():em.end() + 70] if em else ""
+            cm = re.match(r"\s*,?\s*([^,.;]{0,50})", cls_txt) if cls_txt else None
+            classe, letra, grau = parse_classe(cm.group(1) if cm else "")
+            um = re.search(
+                r"(?i)(?:redistribu[íi]d[oa]|distribu[íi]d[oa])\s+(?:junto\s+)?(?:aos?|às?|à|ao|nos?|na|no)\s+"
+                r"(?P<unit>.+?)(?:\s+pela\s+Portaria|\s*,\s*|\s*\.|$)", chunk,
+            )
+            unit_raw = clean_unit(um.group("unit")) if um else ""
+            key, uname, campus = match_unit(unit_raw)
+            alvo = re.search(r"(?i)(?:Docente responsável|Central Multiusuário)\s*(?:pela|:)?\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ][^.]{2,80})", chunk)
+            port["rows"].append({
+                "tipo": "destinacao", "ano": port["ano"], "data": data,
+                "portaria": f"{port['sigla']} {port['numero']}".strip(),
+                "ementa": ementa, "url": port["url"], "fonte": port["fonte"],
+                "emprego": num, "classe": classe, "letra": letra, "grau": grau, "qtd": 0,
+                "unidade": unit_raw, "unidadeKey": key, "campus": campus,
+                "de": "", "para": unit_raw, "deKey": None, "paraKey": key,
+                "destinatario": re.sub(r"\s+", " ", alvo.group(1)).strip() if alvo else "",
             })
         if port["rows"]:
             portarias.append(port)
@@ -517,8 +581,9 @@ def build_ledger(rows, years):
     por_ano = defaultdict(lambda: {"distribuicao": 0, "redistribuicao": 0})
 
     def snapshot(year):
-        for key in {**{k: 1 for k in stock}, **{r["deKey"] for r in mov if r.get("deKey")},
-                    **{r["paraKey"] for r in mov if r.get("paraKey")}}:
+        keys = set(stock) | {r["deKey"] for r in mov if r.get("deKey")} | \
+               {r["paraKey"] for r in mov if r.get("paraKey")}
+        for key in keys:
             series[year][key] = sum(stock[key].values())
 
     if dist:
@@ -650,7 +715,7 @@ def main() -> None:
         done = [0]
 
         def work(group):
-            text, err = ("", "offline: página não está no cache") if args.offline and not args.refresh else load_page(group, args.refresh)
+            text, err = load_page(group, args.refresh, args.offline)
             with lock:
                 done[0] += 1
                 status = "ok " if not err else "ERRO"

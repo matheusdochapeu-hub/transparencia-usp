@@ -1,0 +1,579 @@
+
+
+
+<html>
+<!-- Para usar um texto com mouse (Início)-->
+<script language="JavaScript" src="/portaltransparencia/javascript/functions.js"></script>
+<!-- Para usar um texto com mouse (Fim)-->
+<!-- Para usar um texto com mouse (Início)-->
+<div id="hintLayer" style="position:absolute; visibility:hidden;"></div>
+<script language="JavaScript">initToolTips();</script>
+<!-- Para usar um texto com mouse (Fim)--> 
+
+
+<script type="text/javascript" src="javascript/sortable.js"></script> 
+<script language="JavaScript">
+
+	function recarrega(reload) {
+		document.form1.target = "_self";
+		document.form1.action = "portaltransparenciaListar?reload="+reload;	
+		document.form1.submit();
+	}  
+  
+	function imagem(entrada){	 
+		if (entrada == 'atual'){
+			window.open('portaltransparenciageraTxtUSP?print=true&ctcatl=S&reload=buscar&imagem=S&chars='+document.form1.chars.value, '_self')
+		}else {
+			window.open('portaltransparenciageraTxtUSP?print=true&dtainictc=&reload=buscar&imagem=S&chars='+document.form1.chars.value, '_self')
+		}
+	}
+	
+</script>
+
+<style type="text/css"> 
+	.filtro {
+		display: none;
+	} 
+</style>
+
+<head>
+  <link href="css/marte.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+
+
+  
+  
+
+
+  
+ 
+<TABLE cellSpacing=0 cellPadding=0 width="100%" align=center bgColor=#ffffff border=0>  
+  <TR>
+    <TD vAlign=bottom bgColor=#ffffff colSpan=0 height=15><FONT 
+      face="Verdana, Arial, Helvetica" size=1 style="font-size: 12px; font-weight: bold;">Portal da Transpar�ncia</FONT></TD>
+  </TR>
+  <TR>
+    <TD vAlign=top bgColor=#ffffff colSpan=0 height=12><IMG height=13 src="images/bc.gif" 
+      width=435></TD>
+  </TR>
+</TABLE>
+<br>
+
+
+
+
+<form name="form1" method="post" action="portaltransparenciaListar">
+
+<p><label FONT face="Verdana, Arial, Helvetica" size=1 style="font-size: 12px; font-weight: bold;">Busca Servidores</label></p>
+	<table width="98%" cellpadding="2" cellspacing="2" align="center">
+	
+		
+		<tr>
+		  <td align="left">Compet&ecirc;ncia:</td>
+		  <td width="87%">
+		    <select name="dtainictc" onChange="javascript:recarrega('true')">
+		    <option value="">- Selecione -</option>
+		     
+		    <option value='01/10/2026'> 
+		    Out/2026</option> 
+		     
+		    <option value='01/09/2026'> 
+		    Set/2026</option> 
+		     
+		    <option value='01/08/2026'> 
+		    Ago/2026</option> 
+		     
+		    <option value='01/07/2026'> 
+		    Jul/2026</option> 
+		     
+		    <option value='01/06/2026'> 
+		    Jun/2026</option> 
+		     
+		    <option value='01/05/2026'> 
+		    Mai/2026</option> 
+		     
+		    <option value='01/04/2026'> 
+		    Abr/2026</option> 
+		     
+		    <option value='01/03/2026'> 
+		    Mar/2026</option> 
+		     
+		    <option value='01/02/2026'> 
+		    Fev/2026</option> 
+		     
+		    <option value='01/01/2026'> 
+		    Jan/2026</option> 
+		     
+		    <option value='01/12/2025'> 
+		    Dez/2025</option> 
+		     
+		    <option value='01/11/2025'> 
+		    Nov/2025</option> 
+		     
+		    <option value='01/10/2025'> 
+		    Out/2025</option> 
+		     
+		    <option value='01/09/2025'> 
+		    Set/2025</option> 
+		     
+		    <option value='01/08/2025'> 
+		    Ago/2025</option> 
+		     
+		    <option value='01/07/2025'> 
+		    Jul/2025</option> 
+		     
+		    <option value='01/06/2025'> 
+		    Jun/2025</option> 
+		     
+		    <option value='01/05/2025'> 
+		    Mai/2025</option> 
+		     
+		    <option value='01/04/2025'> 
+		    Abr/2025</option> 
+		     
+		    <option value='01/03/2025'> 
+		    Mar/2025</option> 
+		     
+		    <option value='01/02/2025'> 
+		    Fev/2025</option> 
+		     
+		    <option value='01/01/2025'> 
+		    Jan/2025</option> 
+		     
+		    <option value='01/12/2024'> 
+		    Dez/2024</option> 
+		     
+		    <option value='01/11/2024'> 
+		    Nov/2024</option> 
+		     
+		    <option value='01/10/2024'> 
+		    Out/2024</option> 
+		     
+		    <option value='01/09/2024'> 
+		    Set/2024</option> 
+		     
+		    <option value='01/08/2024'> 
+		    Ago/2024</option> 
+		     
+		    <option value='01/07/2024'> 
+		    Jul/2024</option> 
+		     
+		    <option value='01/06/2024'> 
+		    Jun/2024</option> 
+		     
+		    <option value='01/05/2024'> 
+		    Mai/2024</option> 
+		     
+		    <option value='01/04/2024'> 
+		    Abr/2024</option> 
+		     
+		    <option value='01/03/2024'> 
+		    Mar/2024</option> 
+		     
+		    <option value='01/02/2024'> 
+		    Fev/2024</option> 
+		     
+		    <option value='01/01/2024'> 
+		    Jan/2024</option> 
+		     
+		    <option value='01/12/2023'> 
+		    Dez/2023</option> 
+		     
+		    <option value='01/11/2023'> 
+		    Nov/2023</option> 
+		     
+		    <option value='01/10/2023'> 
+		    Out/2023</option> 
+		     
+		    <option value='01/09/2023'> 
+		    Set/2023</option> 
+		     
+		    <option value='01/08/2023'> 
+		    Ago/2023</option> 
+		     
+		    <option value='01/07/2023'> 
+		    Jul/2023</option> 
+		     
+		    <option value='01/06/2023'> 
+		    Jun/2023</option> 
+		     
+		    <option value='01/05/2023'> 
+		    Mai/2023</option> 
+		     
+		    <option value='01/04/2023'> 
+		    Abr/2023</option> 
+		     
+		    <option value='01/03/2023'> 
+		    Mar/2023</option> 
+		     
+		    <option value='01/02/2023'> 
+		    Fev/2023</option> 
+		     
+		    <option value='01/01/2023'> 
+		    Jan/2023</option> 
+		     
+		    <option value='01/12/2022'> 
+		    Dez/2022</option> 
+		     
+		    <option value='01/11/2022'> 
+		    Nov/2022</option> 
+		     
+		    <option value='01/10/2022'> 
+		    Out/2022</option> 
+		     
+		    <option value='01/09/2022'> 
+		    Set/2022</option> 
+		     
+		    <option value='01/08/2022'> 
+		    Ago/2022</option> 
+		     
+		    <option value='01/07/2022'> 
+		    Jul/2022</option> 
+		     
+		    <option value='01/06/2022'> 
+		    Jun/2022</option> 
+		     
+		    <option value='01/05/2022'> 
+		    Mai/2022</option> 
+		     
+		    <option value='01/04/2022'> 
+		    Abr/2022</option> 
+		     
+		    <option value='01/03/2022'> 
+		    Mar/2022</option> 
+		     
+		    <option value='01/02/2022'> 
+		    Fev/2022</option> 
+		     
+		    <option value='01/01/2022'> 
+		    Jan/2022</option> 
+		     
+		    <option value='01/12/2021'> 
+		    Dez/2021</option> 
+		     
+		    <option value='01/11/2021'> 
+		    Nov/2021</option> 
+		     
+		    <option value='01/10/2021'> 
+		    Out/2021</option> 
+		     
+		    <option value='01/09/2021'> 
+		    Set/2021</option> 
+		     
+		    <option value='01/08/2021'> 
+		    Ago/2021</option> 
+		     
+		    <option value='01/07/2021'> 
+		    Jul/2021</option> 
+		     
+		    <option value='01/06/2021'> 
+		    Jun/2021</option> 
+		     
+		    <option value='01/05/2021'> 
+		    Mai/2021</option> 
+		     
+		    <option value='01/04/2021'> 
+		    Abr/2021</option> 
+		     
+		    <option value='01/03/2021'> 
+		    Mar/2021</option> 
+		     
+		    <option value='01/02/2021'> 
+		    Fev/2021</option> 
+		     
+		    <option value='01/01/2021'> 
+		    Jan/2021</option> 
+		     
+		    <option value='01/12/2020'> 
+		    Dez/2020</option> 
+		     
+		    <option value='01/11/2020'> 
+		    Nov/2020</option> 
+		     
+		    <option value='01/10/2020'> 
+		    Out/2020</option> 
+		     
+		    <option value='01/09/2020'> 
+		    Set/2020</option> 
+		     
+		    <option value='01/08/2020'> 
+		    Ago/2020</option> 
+		     
+		    <option value='01/07/2020'> 
+		    Jul/2020</option> 
+		     
+		    <option value='01/06/2020'> 
+		    Jun/2020</option> 
+		     
+		    <option value='01/05/2020'> 
+		    Mai/2020</option> 
+		     
+		    <option value='01/04/2020'> 
+		    Abr/2020</option> 
+		     
+		    <option value='01/03/2020'> 
+		    Mar/2020</option> 
+		     
+		    <option value='01/02/2020'> 
+		    Fev/2020</option> 
+		     
+		    <option value='01/01/2020'> 
+		    Jan/2020</option> 
+		     
+		    <option value='01/12/2019'> 
+		    Dez/2019</option> 
+		     
+		    <option value='01/11/2019'> 
+		    Nov/2019</option> 
+		     
+		    <option value='01/10/2019'> 
+		    Out/2019</option> 
+		     
+		    <option value='01/09/2019'> 
+		    Set/2019</option> 
+		     
+		    <option value='01/08/2019'> 
+		    Ago/2019</option> 
+		     
+		    <option value='01/07/2019'> 
+		    Jul/2019</option> 
+		     
+		    <option value='01/06/2019'> 
+		    Jun/2019</option> 
+		     
+		    <option value='01/05/2019'> 
+		    Mai/2019</option> 
+		     
+		    <option value='01/04/2019'> 
+		    Abr/2019</option> 
+		     
+		    <option value='01/03/2019'> 
+		    Mar/2019</option> 
+		     
+		    <option value='01/02/2019'> 
+		    Fev/2019</option> 
+		     
+		    <option value='01/01/2019'> 
+		    Jan/2019</option> 
+		     
+		    <option value='01/12/2018'> 
+		    Dez/2018</option> 
+		     
+		    <option value='01/11/2018'> 
+		    Nov/2018</option> 
+		     
+		    <option value='01/10/2018'> 
+		    Out/2018</option> 
+		     
+		    <option value='01/09/2018'> 
+		    Set/2018</option> 
+		     
+		    <option value='01/08/2018'> 
+		    Ago/2018</option> 
+		     
+		    <option value='01/07/2018'> 
+		    Jul/2018</option> 
+		     
+		    <option value='01/06/2018'> 
+		    Jun/2018</option> 
+		     
+		    <option value='01/05/2018'> 
+		    Mai/2018</option> 
+		     
+		    <option value='01/04/2018'> 
+		    Abr/2018</option> 
+		     
+		    <option value='01/03/2018'> 
+		    Mar/2018</option> 
+		     
+		    <option value='01/02/2018'> 
+		    Fev/2018</option> 
+		     
+		    <option value='01/01/2018'> 
+		    Jan/2018</option> 
+		     
+		    <option value='01/12/2017'> 
+		    Dez/2017</option> 
+		     
+		    <option value='01/11/2017'> 
+		    Nov/2017</option> 
+		     
+		    <option value='01/10/2017'> 
+		    Out/2017</option> 
+		     
+		    <option value='01/09/2017'> 
+		    Set/2017</option> 
+		     
+		    <option value='01/08/2017'> 
+		    Ago/2017</option> 
+		     
+		    <option value='01/07/2017'> 
+		    Jul/2017</option> 
+		     
+		    <option value='01/06/2017'> 
+		    Jun/2017</option> 
+		     
+		    <option value='01/05/2017'> 
+		    Mai/2017</option> 
+		     
+		    <option value='01/04/2017'> 
+		    Abr/2017</option> 
+		     
+		    <option value='01/03/2017'> 
+		    Mar/2017</option> 
+		     
+		    <option value='01/02/2017'> 
+		    Fev/2017</option> 
+		     
+		    <option value='01/01/2017'> 
+		    Jan/2017</option> 
+		     
+		    <option value='01/12/2016'> 
+		    Dez/2016</option> 
+		     
+		    <option value='01/11/2016'> 
+		    Nov/2016</option> 
+		     
+		    <option value='01/10/2016'> 
+		    Out/2016</option> 
+		     
+		    <option value='01/09/2016'> 
+		    Set/2016</option> 
+		     
+		    <option value='01/08/2016'> 
+		    Ago/2016</option> 
+		     
+		    <option value='01/07/2016'> 
+		    Jul/2016</option> 
+		     
+		    <option value='01/06/2016'> 
+		    Jun/2016</option> 
+		     
+		    <option value='01/05/2016'> 
+		    Mai/2016</option> 
+		     
+		    <option value='01/04/2016'> 
+		    Abr/2016</option> 
+		     
+		    <option value='01/03/2016'> 
+		    Mar/2016</option> 
+		     
+		    <option value='01/02/2016'> 
+		    Fev/2016</option> 
+		     
+		    <option value='01/01/2016'> 
+		    Jan/2016</option> 
+		     
+		    <option value='01/12/2015'> 
+		    Dez/2015</option> 
+		     
+		    <option value='01/11/2015'> 
+		    Nov/2015</option> 
+		     
+		    <option value='01/10/2015'> 
+		    Out/2015</option> 
+		     
+		    <option value='01/09/2015'> 
+		    Set/2015</option> 
+		     
+		    <option value='01/08/2015'> 
+		    Ago/2015</option> 
+		     
+		    <option value='01/07/2015'> 
+		    Jul/2015</option> 
+		     
+		    <option value='01/06/2015'> 
+		    Jun/2015</option> 
+		     
+		    <option value='01/05/2015'> 
+		    Mai/2015</option> 
+		     
+		    <option value='01/04/2015'> 
+		    Abr/2015</option> 
+		     
+		    <option value='01/03/2015'> 
+		    Mar/2015</option> 
+		     
+		    <option value='01/02/2015'> 
+		    Fev/2015</option> 
+		     
+		    <option value='01/01/2015'> 
+		    Jan/2015</option> 
+		     
+		    <option value='01/12/2014'> 
+		    Dez/2014</option> 
+		     
+		    <option value='01/11/2014'> 
+		    Nov/2014</option> 
+		     
+		    <option value='01/10/2014'> 
+		    Out/2014</option> 
+		     
+		    <option value='01/09/2014'> 
+		    Set/2014</option> 
+		     
+		    </select>      
+		  </td>
+		</tr>
+		
+		
+		
+		
+		
+		 
+		<tr>
+		  <td colspan="2"> 
+		    <div align="center">
+		      
+		       
+		      
+		      &nbsp;&nbsp;
+		      <input type=submit value='Nota Explicativa' name="Submit" onClick="javascript:recarrega('explicar')">          
+		      <input name="reload" type="hidden" value="buscar"/> 
+		      <input name="imagem" type="hidden" value="S"/>  
+		      <input name="print" type="hidden" value="true"/> <!-- Para não aparecer o Menu do Marte --> 
+		    </div>
+		  </td>
+		
+		<input name="ativos" type="hidden"/>
+		 
+		  
+		</tr>		
+	</table> 
+	  
+</form>
+
+<div>
+   <div id="masterdiv">
+   
+        <table width="720" border="0" cellspacing="5" cellpadding="0" style="font-family: Arial; font-size: 9pt; font-style: normal; font-weight: normal;
+            text-align: left; text-decoration: none;">
+           
+              <tr>
+                <td nowrap="nowrap">
+                  <a href='portaltransparenciageraTxtUSP?print=true&ctcatl=S&reload=imagemArq'><img src="images/txt-icon.png" border="0" title="Baixar arquivo"></a>
+                </td>                         
+                <td scope="col">Registro atual de todos os docentes / funcion&aacute;rios (arquivo texto)</td>
+               </tr>
+              <tr>
+                <td nowrap="nowrap">
+                  <a href='portaltransparenciageraTxtUSP?print=true&dtainictc=&reload=imagemArq'><img src="images/txt-icon.png" border="0" title="Baixar arquivo"></a>
+                </td>               
+                <td>S&eacute;rie Hist&oacute;rica de Remunera&ccedil;&atilde;o Mensal de todos os docentes / funcion&aacute;rios (arquivos texto)</td>
+              </tr>
+          
+          
+          
+          
+        </table>
+        
+        </div>  
+</div>
+
+
+
+
+
+</body>
+</html>
