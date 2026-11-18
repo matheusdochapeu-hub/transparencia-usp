@@ -104,7 +104,7 @@ export async function render(el, slug) {
   const topLi = cat.labels.map((_, i) => i).sort((a, b) => raw(b, lastI) - raw(a, lastI))[0];
   const topShare = raw(topLi, lastI) / (curTot || 1);
 
-  const isPyramid = meta.slug === 'faixa-etaria';
+  const isPyramid = meta.slug === 'faixa-etaria' || meta.slug === 'tempo-usp';
   let pyramidRows = '';
   if (isPyramid) {
     const rows = cat.labels
@@ -186,7 +186,7 @@ export async function render(el, slug) {
     ${
       isPyramid
         ? `<div class="section"><div class="card">
-            <div class="card-head"><div><h3>Pirâmide etária</h3><p>Docentes (esquerda) e servidores (direita) em ${esc(refs[lastI].label)}.</p></div></div>
+            <div class="card-head"><div><h3>${meta.slug === 'faixa-etaria' ? 'Pirâmide etária' : 'Pirâmide por tempo de casa'}</h3><p>Docentes (esquerda) e servidores (direita) em ${esc(refs[lastI].label)}.</p></div></div>
             <div class="legend" style="margin-bottom:8px">
               <span class="item"><span class="swatch" style="background:var(--c1)"></span>Docentes</span>
               <span class="item"><span class="swatch" style="background:var(--c2)"></span>Servidores</span>
