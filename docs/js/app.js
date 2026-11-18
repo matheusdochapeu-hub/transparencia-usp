@@ -113,7 +113,7 @@ const ROUTES = [
   { key: 'categoria', re: /^\/categoria\/([a-z0-9-]+)$/, label: 'Categoria', mod: Categoria },
   { key: 'mudancas', re: /^\/mudancas$/, label: 'Mudanças', mod: Mudancas },
   { key: 'vacancia', re: /^\/vacancia$/, label: 'Vacância', mod: Vacancia },
-  { key: 'tecnicos', re: /^\/tecnicos$/, label: 'Técnico-Administrativo', mod: Tecnicos },
+  { key: 'tecnicos', re: /^\/tecnicos$/, label: 'Servidores', mod: Tecnicos },
   { key: 'correlacoes', re: /^\/correlacoes$/, label: 'Correlações', mod: Correlacoes },
   { key: 'dados', re: /^\/dados$/, label: 'Dados', mod: Dados },
   { key: 'sobre', re: /^\/sobre$/, label: 'Sobre', mod: Sobre },

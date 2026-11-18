@@ -29,7 +29,7 @@ export async function render(el) {
     },
     {
       q: 'Dá para saber quantos cargos estão vagos (em vacância) por campus?',
-      a: `Para <b>docentes</b>, sim: o Anuário Estatístico da USP publica, por unidade, quantos cargos de professor estão <b>vagos</b> e <b>providos</b> (Tabela 2.08). A aba <a href="#/vacancia">Vacância</a> traz a série de 2014 a 2025, com totais por campus. Para <b>técnicos administrativos</b> a USP não publica essa informação — ela existe apenas no Banco de Cargos interno. O que existe é o <b>quadro efetivo</b> por carreira (Básico, Técnico e Superior), na aba <a href="#/tecnicos">Técnico-Administrativo</a>. Vale lembrar que <b>cargo vago não é concurso aberto</b>: a decisão de abrir edital é da Reitoria/CAA.`,
+      a: `Para <b>docentes</b>, sim: o Anuário Estatístico da USP publica, por unidade, quantos cargos de professor estão <b>vagos</b> e <b>providos</b> (Tabela 2.08). A aba <a href="#/vacancia">Vacância</a> traz a série de 2014 a 2025, com totais por campus. Para <b>técnicos administrativos</b> a USP não publica essa informação — ela existe apenas no Banco de Cargos interno. O que existe é o <b>quadro efetivo</b> por carreira (Básico, Técnico e Superior), na aba <a href="#/tecnicos">Servidores</a>. Vale lembrar que <b>cargo vago não é concurso aberto</b>: a decisão de abrir edital é da Reitoria/CAA.`,
     },
     {
       q: 'Por que alguns totais não batem entre categorias?',

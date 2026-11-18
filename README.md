@@ -29,7 +29,7 @@ ranking de mudanças e análise de correlações.
 | **Categorias** | 11 recortes, cada um com evolução mensal, tabela comparativa por período e comparador de dois meses |
 | **Mudanças** | Ranking de todos os valores por variação (1 mês, 12 meses, 5 anos, série completa) |
 | **Vacância** | Cargos de docente autorizados vs. providos (**vago/provido**) por unidade e campus, 2014–2025 |
-| **Técnico-Administrativo** | Quadro efetivo por carreira (**Básico, Técnico, Superior**) e por unidade/campus, 2014–2025 |
+| **Servidores** | Quadro efetivo da carreira técnico-administrativa por carreira (**Básico, Técnico, Superior**) e por unidade/campus, 2014–2025 |
 | **Correlações** | Matriz de correlação entre indicadores de categorias diferentes, com dispersão, reta de regressão e p-valor |
 | **Dados** | Tabela completa, dicionário de dados e exportações CSV/JSON |
 

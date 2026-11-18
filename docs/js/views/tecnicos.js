@@ -34,8 +34,8 @@ export async function render(el) {
   el.innerHTML = `
     ${pageHead({
       eyebrow: 'Anuário Estatístico · Tabela 2.14',
-      title: 'Servidores técnico-administrativos',
-      lead: 'Quadro <b>efetivo</b> (servidores providos) por carreira — <b>Básico</b>, <b>Técnico</b> e <b>Superior</b> — e por unidade/campus. A USP não publica cargos em vacância para esta carreira; a vacância existe apenas para docentes.',
+      title: 'Servidores',
+      lead: 'Quadro <b>efetivo</b> (servidores providos) da carreira técnico-administrativa, por carreira — <b>Básico</b>, <b>Técnico</b> e <b>Superior</b> — e por unidade/campus. A USP não publica cargos em vacância para esta carreira; a vacância existe apenas para docentes.',
       actions: `<a class="btn" href="#/vacancia">Ver vacância (docentes)</a><a class="btn" href="${tec.sourceUrl}" target="_blank" rel="noopener">Fonte: Anuário USP ↗</a>`,
     })}
 
