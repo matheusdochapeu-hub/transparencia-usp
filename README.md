@@ -126,6 +126,43 @@ python -m http.server 8000 --directory docs
 
 Não há etapa de build para o front-end: é HTML/CSS/JS puro (ES modules), sem dependências.
 
+## Empregos públicos e vagas técnico-administrativas
+
+A USP aloca **empregos públicos** (CLT, criados pela LC 1.074/2008) por portaria no D.O.E.
+O script `scripts/extract_doe.py` baixa esse acervo — portal `doe.sp.gov.br` para 2023+,
+PDFs da Imprensa Oficial para 2009–2022 e o índice anual da Normas USP como fonte
+complementar —, extrai portaria a portaria a unidade, a classe/letra/grau e a quantidade,
+e monta um livro-razão: **distribuições criam estoque por unidade** e **redistribuições
+movem empregos entre unidades**.
+
+```bash
+python scripts/extract_doe.py --years 2009 2010 2011 2012 2013 2014 2015 2016 2017 \
+  2018 2019 2020 2021 2022 2023 2024 2025 2026 --leginf --jobs 4
+python scripts/analise_vagas.py    # gera docs/data/vagas-tecnicos.json + relatório
+```
+
+Saídas: `data/doe/` (cache de páginas, `rows.json`, `ledger.json`), o cruzamento em
+`docs/data/vagas-tecnicos.json` e o resumo em
+[RELATORIO-VAGAS-TECNICOS.md](RELATORIO-VAGAS-TECNICOS.md).
+
+Como ler os indicadores:
+
+- **empregos** — estoque de empregos públicos alocado à unidade segundo o D.O.E.;
+- **vagas mínimas** — `max(0, empregos − efetivo)`: só aparece quando a unidade tem mais
+  empregos alocados do que servidores técnico-administrativos (limite inferior seguro);
+- **vagas potenciais** — vagas mínimas + aposentadorias de TA nos últimos 12 meses;
+- **fluxo com a Reitoria** — empregos que saíram do banco central de vagas para a unidade
+  (recebidos) ou voltaram da unidade para lá (devolvidos).
+
+Cobertura atual: **6.016 empregos alocados** (≈68% dos 8.893 criados pela LC 1.074/2008) em
+**77 unidades**; 3.933 de 3.994 páginas processadas. Lacunas conhecidas: a biblioteca do DRH
+não tem a página de 2013 (suprida pela Normas USP), alguns PDFs de 2015–2021 estão fora do
+ar e portarias cujo anexo é imagem não são lidas.
+
+> O número exato de vagas por unidade exige o quadro de lotação/ocupação do DRH: o Anuário
+> agrega todos os regimes (cargos e empregos) e não informa quantos servidores ocupam
+> empregos públicos. Por isso o painel fala em *vagas mínimas* e *potenciais*.
+
 ## Automação mensal
 
 `.github/workflows/update-data.yml` roda no **dia 5 de cada mês** (09:00 UTC):
