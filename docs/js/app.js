@@ -75,13 +75,42 @@ nav?.addEventListener('click', (e) => { if (e.target.closest('a')) closeMenu(); 
 function fillScopeSelect() {
   const sel = document.getElementById('scopeSel');
   if (!sel) return;
-  const campi = store.scopes.filter((s) => s.type === 'campus');
+  const campi = store.scopes
+    .filter((s) => s.type === 'campus')
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   const units = store.scopes.filter((s) => s.type === 'unit');
-  sel.innerHTML = `
-    <option value="usp">USP (geral)</option>
-    ${campi.length ? `<optgroup label="Campus">${campi.map((s) => `<option value="${esc(s.key)}">${esc(s.name)}</option>`).join('')}</optgroup>` : ''}
-    ${units.length ? `<optgroup label="Unidades">${units.map((s) => `<option value="${esc(s.key)}">${esc(s.name || s.unidade)}</option>`).join('')}</optgroup>` : ''}
-  `;
+
+  // agrupa as unidades pelo campus (São Carlos, São Paulo, ...)
+  const byCampus = new Map();
+  for (const u of units) {
+    const c = u.campus || '';
+    if (!byCampus.has(c)) byCampus.set(c, []);
+    byCampus.get(c).push(u);
+  }
+  const label = (u) => u.name || u.unidade;
+  const opts = (list) =>
+    list
+      .slice()
+      .sort((a, b) => label(a).localeCompare(label(b), 'pt-BR'))
+      .map((u) => `<option value="${esc(u.key)}">${esc(label(u))}</option>`)
+      .join('');
+
+  const groups = campi
+    .map((c) => {
+      const list = byCampus.get(c.name) || [];
+      byCampus.delete(c.name);
+      return `<optgroup label="${esc(c.name)}">
+        <option value="${esc(c.key)}">${esc(c.name)} · campus (agregado)</option>
+        ${opts(list)}
+      </optgroup>`;
+    })
+    .join('');
+
+  const rest = [...byCampus.entries()]
+    .map(([c, list]) => `<optgroup label="${esc(c || 'Outros')}">${opts(list)}</optgroup>`)
+    .join('');
+
+  sel.innerHTML = `<option value="usp">USP (geral)</option>${groups}${rest}`;
   sel.value = store.scopeKey;
   sel.addEventListener('change', async () => {
     sel.disabled = true;
