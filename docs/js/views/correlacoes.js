@@ -51,8 +51,7 @@ export async function render(el) {
   const inds = [];
   for (const cat of cats) {
     const ordered = cat.labels.map((_, i) => i).sort((a, b) => cat.m.total[b][n - 1] - cat.m.total[a][n - 1]);
-    const take = cat.labels.length <= 4 ? ordered : ordered.slice(0, 4);
-    for (const li of take) {
+    for (const li of ordered) {
       const label = cat.labels[li];
       if (!label || /^total$/i.test(label)) continue;
       inds.push({
@@ -74,6 +73,7 @@ export async function render(el) {
     selected: new Set(),
     q: '',
     pair: null,
+    expanded: new Set(),
   };
   // seleção inicial: até 2 por categoria
   {
@@ -127,7 +127,7 @@ export async function render(el) {
     </div>
 
     <div class="card" style="margin-bottom:16px">
-      <div class="card-head"><div><h3>Séries no cálculo</h3><p>Marque até 24 indicadores — a matriz usa exatamente os selecionados.</p></div><div class="spacer"></div>
+      <div class="card-head"><div><h3>Séries no cálculo</h3><p>Marque até 24 indicadores — a matriz usa exatamente os selecionados. <b>Categoria</b> é o vínculo (docente/técnico/aposentado); os níveis <b>Básico</b>, <b>Técnico</b> e <b>Superior</b> (analistas) ficam em <b>Classe</b>.</p></div><div class="spacer"></div>
         <input type="search" id="pq" placeholder="Buscar indicador…" style="width:240px" aria-label="Buscar indicador">
       </div>
       <div id="picker" style="max-height:190px;overflow:auto;display:flex;flex-direction:column;gap:10px"></div>
@@ -165,21 +165,41 @@ export async function render(el) {
       if (!groups.has(ind.cat.slug)) groups.set(ind.cat.slug, []);
       groups.get(ind.cat.slug).push(ind);
     }
-    el.querySelector('#picker').innerHTML = [...groups.entries()]
-      .map(
-        ([slug, list]) => `<div>
-          <div class="hint" style="font-weight:650;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">${esc(list[0].catTitle)}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${list
-              .map(
-                (ind) => `<button class="pill" data-key="${esc(ind.key)}" aria-pressed="${st.selected.has(ind.key)}" style="--pc:${ind.color}">
-                  <span class="swatch"></span>${esc(ind.label)}</button>`
-              )
-              .join('')}
-          </div>
-        </div>`
-      )
-      .join('') || '<div class="empty">Nenhum indicador.</div>';
+    el.querySelector('#picker').innerHTML =
+      [...groups.entries()]
+        .map(([slug, list]) => {
+          const open = !!q || st.expanded.has(slug);
+          const shown = open ? list : list.slice(0, 6);
+          const hidden = list.length - shown.length;
+          return `<div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <span class="hint" style="font-weight:650;text-transform:uppercase;letter-spacing:.04em">${esc(list[0].catTitle)}</span>
+              <span class="hint">${list.length} valores</span>
+              ${
+                list.length > 6
+                  ? `<button class="btn ghost" data-expand="${esc(slug)}" style="margin-left:auto;padding:2px 8px;font-size:.7rem">${open ? 'mostrar menos' : `ver todos (+${hidden})`}</button>`
+                  : ''
+              }
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px">
+              ${shown
+                .map(
+                  (ind) => `<button class="pill" data-key="${esc(ind.key)}" aria-pressed="${st.selected.has(ind.key)}" style="--pc:${ind.color}">
+                    <span class="swatch"></span>${esc(ind.label)}</button>`
+                )
+                .join('')}
+            </div>
+          </div>`;
+        })
+        .join('') || '<div class="empty">Nenhum indicador.</div>';
+
+    el.querySelectorAll('#picker [data-expand]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const s = btn.dataset.expand;
+        st.expanded.has(s) ? st.expanded.delete(s) : st.expanded.add(s);
+        drawPicker();
+      });
+    });
 
     el.querySelectorAll('#picker [data-key]').forEach((btn) => {
       btn.addEventListener('click', () => {
