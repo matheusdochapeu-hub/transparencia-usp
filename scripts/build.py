@@ -100,8 +100,8 @@ def _strip_volatile(obj):
     return obj
 
 
-def write_index_if_changed(path: str, obj) -> bool:
-    """Evita reescrever o índice quando só o timestamp mudaria."""
+def write_if_changed(path: str, obj) -> bool:
+    """Grava só se o conteúdo relevante mudou (ignora generatedAt)."""
     prev = read_json(path)
     if prev is not None and _strip_volatile(prev) == _strip_volatile(obj):
         return False
@@ -197,12 +197,13 @@ def build_vacancia() -> dict | None:
         "campus": campus_agg,
         "totals": totals,
     }
-    write_json(os.path.join(OUT, "vacancia.json"), payload)
+    changed = write_if_changed(os.path.join(OUT, "vacancia.json"), payload)
     last = str(years[-1])
     t = totals[last]
     print(
         f"  vacância: {len(years)} anos ({years[0]}–{years[-1]}), {len(units_meta)} unidades | "
         f"{last}: {t['iv'] + t['ip'] + t['fv'] + t['fp']} cargos, {t['iv'] + t['fv']} vagos"
+        + ("" if changed else " (sem mudanças)")
     )
     return payload
 
@@ -593,7 +594,7 @@ def main():
             "totalAll": sum(totals[-1]),
         },
     }
-    changed = write_index_if_changed(os.path.join(OUT, "index.json"), index)
+    changed = write_if_changed(os.path.join(OUT, "index.json"), index)
     print(f"  index.json {'atualizado' if changed else 'sem mudanças'}")
 
     # ---- diagnóstico de consistência ---------------------------------------
