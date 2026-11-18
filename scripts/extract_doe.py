@@ -399,6 +399,42 @@ MOV = re.compile(
 
 EMP_NUM = re.compile(r"(?i)empregos?\s+p[úu]blicos?\s+(\d{6,7})")
 
+MULTI_HEAD = re.compile(
+    r"(?i)empregos?\s+p[úu]blicos?\s+relacionad[oa]s\s+abaixo"
+    r"|emprego\s+p[úu]blico\s+grupo\s*/?\s*faixa"
+)
+MULTI_ROW = re.compile(
+    r"(?P<num>\d{6,7})\s+(?P<classe>Superior|T[ée]cnico|B[áa]sico)\s+"
+    r"(?P<letra>[A-Z0-9]{1,3})\s+(?P<grau>[A-Z])\s+(?P<port>\d{3,4}/\d{4})\s+"
+    r"(?P<unit>.+?)(?=(?:\s+\d{6,7}\s+(?:Superior|T[ée]cnico|B[áa]sico))|$)"
+)
+
+
+def parse_multi_moves(chunk: str):
+    """Tabelas do tipo 'emprego | grupo/faixa/nível | portaria | unidade'."""
+    if not MULTI_HEAD.search(chunk):
+        return None
+    tabela = re.search(r"(?i)emprego\s+p[úu]blico\s+grupo", chunk)
+    if not tabela:
+        return None
+    pre = chunk[:tabela.start()]
+    dest = re.search(
+        r"(?i)redistribu[íi]d[oa]s?\s+.{0,200}?\s+para\s+(?:a\s+|o\s+|à\s+|ao\s+)?(?P<para>[^:.]+?)\s*(?::|\.|$)",
+        pre,
+    )
+    if not dest:
+        return None
+    para = clean_unit(dest.group("para"))
+    seg = re.split(r"(?i)artigo\s+2", chunk[tabela.end():])[0]
+    itens = []
+    for rm in MULTI_ROW.finditer(seg):
+        unit = clean_unit(rm.group("unit"))
+        if not unit:
+            continue
+        itens.append((rm.group("num"), rm.group("classe"), rm.group("letra"),
+                      rm.group("grau"), unit))
+    return (para, itens) if itens else None
+
 REF_BEFORE = re.compile(
     r"(?i)(?:pela|pelo|pelas|pelos|da|do|das|dos|conforme|nos\s+termos\s+d[ao])\s+(?:a\s+|o\s+)?$"
 )
@@ -531,6 +567,22 @@ def parse_page(text: str, meta: dict):
                     "categoria": re.sub(r"\s+", " ", cat).strip(" ,;") if cat else "",
                 })
         elif tipo in ("redistribuicao", "transferencia"):
+            multi = parse_multi_moves(chunk)
+            if multi:
+                para_raw, itens = multi
+                para_key, para_name, campus = match_unit(para_raw)
+                for num, cls, letra, grau, unidade in itens:
+                    de_key, _, _ = match_unit(unidade)
+                    port["rows"].append({
+                        "tipo": "redistribuicao", "ano": port["ano"], "data": data,
+                        "portaria": f"{port['sigla']} {port['numero']}".strip(),
+                        "ementa": ementa, "url": port["url"], "fonte": port["fonte"],
+                        "emprego": num, "classe": cls, "letra": letra, "grau": grau, "qtd": 1,
+                        "unidade": unidade, "unidadeKey": de_key, "campus": campus,
+                        "de": unidade, "para": para_raw, "deKey": de_key, "paraKey": para_key,
+                    })
+                portarias.append(port)
+                continue
             em = EMP_NUM.search(chunk)
             num = em.group(1) if em else ""
             pos = em.end() if em else 0

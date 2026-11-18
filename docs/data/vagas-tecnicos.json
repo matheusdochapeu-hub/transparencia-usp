@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-18T16:38:53+00:00",
+ "generatedAt": "2026-11-18T16:42:36+00:00",
  "anoReferencia": 2026,
  "metodo": "empregos = estoque de empregos públicos alocados por unidade segundo o D.O.E. (distribuições e redistribuições); efetivo = técnico-administrativos ativos no Portal da Transparência; vagasMin = max(0, empregos - efetivo); apos12m = novas aposentadorias de técnico-administrativos em 12 meses; vagasPot = vagasMin + apos12m.",
  "aviso": "O efetivo do Anuário reúne servidores de todos os regimes (cargos e empregos). vagasMin é um limite inferior: só aparecem vagas quando os empregos alocados superam o efetivo total da unidade. Para o número exato seria necessário o quadro de lotação do DRH.",
@@ -13,8 +13,8 @@
   "unidades": 79,
   "unidadesComEmpregos": 75,
   "unidadesSemEfetivo": 2,
-  "recebidosBanco": 0,
-  "devolvidosBanco": 0
+  "recebidosBanco": 6,
+  "devolvidosBanco": 16
  },
  "campi": [
   {
@@ -29,7 +29,7 @@
    "vagasPot": 32,
    "movGanhos": 4,
    "movPerdas": 0,
-   "recebidosBanco": 0,
+   "recebidosBanco": 2,
    "devolvidosBanco": 0,
    "semEfetivo": 0
   },
@@ -46,14 +46,14 @@
    "movGanhos": 3,
    "movPerdas": 6,
    "recebidosBanco": 0,
-   "devolvidosBanco": 0,
+   "devolvidosBanco": 1,
    "semEfetivo": 0
   },
   {
    "campus": "São Paulo",
    "cidade": "São Paulo",
    "unidades": 47,
-   "empregos": 3939,
+   "empregos": 3940,
    "efetivo": 8354,
    "aposentados": 1331,
    "apos12m": 2,
@@ -61,8 +61,8 @@
    "vagasPot": 2,
    "movGanhos": 79,
    "movPerdas": 46,
-   "recebidosBanco": 0,
-   "devolvidosBanco": 0,
+   "recebidosBanco": 3,
+   "devolvidosBanco": 13,
    "semEfetivo": 2
   },
   {
@@ -93,8 +93,8 @@
    "vagasPot": 0,
    "movGanhos": 4,
    "movPerdas": 13,
-   "recebidosBanco": 0,
-   "devolvidosBanco": 0,
+   "recebidosBanco": 1,
+   "devolvidosBanco": 1,
    "semEfetivo": 0
   },
   {
@@ -110,7 +110,7 @@
    "movGanhos": 1,
    "movPerdas": 9,
    "recebidosBanco": 0,
-   "devolvidosBanco": 0,
+   "devolvidosBanco": 1,
    "semEfetivo": 0
   },
   {
@@ -149,7 +149,7 @@
    "campus": "Órgãos centrais (RUSP)",
    "cidade": "São Paulo",
    "unidades": 4,
-   "empregos": 91,
+   "empregos": 90,
    "efetivo": 435,
    "aposentados": 0,
    "apos12m": 0,
@@ -180,7 +180,7 @@
    "movGanhos": 3,
    "movPerdas": 0,
    "movUltimo": "2026-07-21",
-   "recebidosBanco": 0,
+   "recebidosBanco": 2,
    "devolvidosBanco": 0
   },
   {
@@ -201,7 +201,7 @@
    "movPerdas": 2,
    "movUltimo": "2026-08-19",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 1
   },
   {
    "sigla": "SVOC",
@@ -248,7 +248,7 @@
    "nome": "Reitoria da USP",
    "campus": "São Paulo",
    "cidade": "São Paulo",
-   "empregos": 644,
+   "empregos": 648,
    "efetivo": 1509,
    "efetivoAno": 2025,
    "semEfetivo": false,
@@ -281,7 +281,7 @@
    "movPerdas": 1,
    "movUltimo": "2026-06-11",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 1
   },
   {
    "sigla": "FMRP",
@@ -301,7 +301,7 @@
    "movPerdas": 4,
    "movUltimo": "2026-08-24",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 1
   },
   {
    "sigla": "ESALQ",
@@ -321,7 +321,7 @@
    "movPerdas": 7,
    "movUltimo": "2026-10-23",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 1
   },
   {
    "sigla": "FSP",
@@ -341,7 +341,7 @@
    "movPerdas": 3,
    "movUltimo": "2026-09-16",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 1
   },
   {
    "sigla": "FFLCH",
@@ -381,14 +381,14 @@
    "movPerdas": 3,
    "movUltimo": "2026-06-17",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 1
   },
   {
    "sigla": "FE",
    "nome": "Fac de Educação",
    "campus": "São Paulo",
    "cidade": "São Paulo",
-   "empregos": 96,
+   "empregos": 95,
    "efetivo": 175,
    "efetivoAno": 2025,
    "semEfetivo": false,
@@ -468,7 +468,7 @@
    "nome": "Fac de C Farmacêuticas",
    "campus": "São Paulo",
    "cidade": "São Paulo",
-   "empregos": 70,
+   "empregos": 69,
    "efetivo": 121,
    "efetivoAno": 2025,
    "semEfetivo": false,
@@ -521,7 +521,7 @@
    "movPerdas": 2,
    "movUltimo": "2026-07-21",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 1
   },
   {
    "sigla": "IQ",
@@ -701,7 +701,7 @@
    "movPerdas": 1,
    "movUltimo": "2025-05-14",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 1
   },
   {
    "sigla": "PUSP-FC",
@@ -740,7 +740,7 @@
    "movGanhos": 1,
    "movPerdas": 0,
    "movUltimo": "2026-07-13",
-   "recebidosBanco": 0,
+   "recebidosBanco": 1,
    "devolvidosBanco": 0
   },
   {
@@ -760,7 +760,7 @@
    "movGanhos": 1,
    "movPerdas": 0,
    "movUltimo": "2026-09-14",
-   "recebidosBanco": 0,
+   "recebidosBanco": 1,
    "devolvidosBanco": 0
   },
   {
@@ -901,7 +901,7 @@
    "movPerdas": 5,
    "movUltimo": "2026-04-27",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 3
   },
   {
    "sigla": "EEFE",
@@ -941,7 +941,7 @@
    "movPerdas": 1,
    "movUltimo": "2026-09-18",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 1
   },
   {
    "sigla": "MAE",
@@ -961,7 +961,7 @@
    "movPerdas": 2,
    "movUltimo": "2026-10-23",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 2
   },
   {
    "sigla": "FFCLRP",
@@ -1040,7 +1040,7 @@
    "movGanhos": 1,
    "movPerdas": 0,
    "movUltimo": "2025-11-07",
-   "recebidosBanco": 0,
+   "recebidosBanco": 1,
    "devolvidosBanco": 0
   },
   {
@@ -1181,7 +1181,7 @@
    "movPerdas": 2,
    "movUltimo": "2026-10-08",
    "recebidosBanco": 0,
-   "devolvidosBanco": 0
+   "devolvidosBanco": 2
   },
   {
    "sigla": "FCFRP",
@@ -1228,7 +1228,7 @@
    "nome": "Inst de Energia e Ambiente",
    "campus": "São Paulo",
    "cidade": "São Paulo",
-   "empregos": 48,
+   "empregos": 47,
    "efetivo": 131,
    "efetivoAno": 2025,
    "semEfetivo": false,
@@ -1428,7 +1428,7 @@
    "nome": "",
    "campus": "Órgãos centrais (RUSP)",
    "cidade": "São Paulo",
-   "empregos": 73,
+   "empregos": 72,
    "efetivo": 157,
    "efetivoAno": 2023,
    "semEfetivo": false,
@@ -1580,7 +1580,7 @@
    "movGanhos": 1,
    "movPerdas": 2,
    "movUltimo": "2026-04-22",
-   "recebidosBanco": 0,
+   "recebidosBanco": 1,
    "devolvidosBanco": 0
   },
   {

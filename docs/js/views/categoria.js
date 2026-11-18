@@ -4,7 +4,7 @@ import { store, periodColumns } from '../data.js';
 import { lineChart, sparklineSVG } from '../charts.js';
 import { pageHead, card, seg, bindSegs, heatStyle, notice } from '../ui.js';
 import {
-  esc, fmtInt, fmtPct, fmtSigned, colorAt, toCSV, downloadFile, debounce, nf1, nf0,
+  esc, fmtInt, fmtPct, fmtSigned, colorAt, toCSV, downloadFile, debounce, nf1, nf0, naturalCompare,
 } from '../util.js';
 
 const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -282,7 +282,7 @@ export async function render(el, slug) {
       current: (a, b) => cur(b) - cur(a),
       delta: (a, b) => Math.abs(delta(b)) - Math.abs(delta(a)),
       pct: (a, b) => Math.abs(pct(b) ?? 0) - Math.abs(pct(a) ?? 0),
-      label: (a, b) => cat.labels[a].localeCompare(cat.labels[b], 'pt-BR'),
+      label: (a, b) => naturalCompare(cat.labels[a], cat.labels[b]),
     }[st.sortKey];
     lis.sort(cmp);
     if (st.sortDir === 'asc') lis.reverse();

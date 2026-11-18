@@ -152,9 +152,9 @@ def write_markdown(payload: dict, destino: str) -> None:
     L.append("")
     banco = [l for l in linhas if l["recebidosBanco"] or l["devolvidosBanco"]]
     if banco:
-        L.append("## Fluxo do Banco de Reservas de Vagas da Reitoria (últimos 3 anos)")
+        L.append("## Fluxo com a Reitoria / Banco de Reservas de Vagas (últimos 3 anos)")
         L.append("")
-        L.append("Empregos que saíram do banco central para a unidade (recebidos) ou voltaram da unidade para o banco (devolvidos).")
+        L.append("Empregos que saíram da Reitoria/banco central para a unidade (recebidos) ou voltaram da unidade para lá (devolvidos).")
         L.append("")
         L.append("| Unidade | Cidade | Recebidos | Devolvidos |")
         L.append("| --- | --- | ---: | ---: |")
@@ -203,9 +203,11 @@ def main() -> None:
             m["ganhos" if lado == "paraKey" else "perdas"] += 1
             if r.get("data") and r["data"] > m["ultimo"]:
                 m["ultimo"] = r["data"]
-        if "banco de reservas" in (r.get("de") or "").lower() and r.get("paraKey"):
+        vindo_banco = "banco de" in (r.get("de") or "").lower() or r.get("deKey") == "RUSP"
+        indo_banco = "banco de" in (r.get("para") or "").lower() or r.get("paraKey") == "RUSP"
+        if vindo_banco and r.get("paraKey") and r["paraKey"] != "RUSP":
             banco.setdefault(r["paraKey"], {"recebidos": 0, "devolvidos": 0})["recebidos"] += 1
-        if "banco de reservas" in (r.get("para") or "").lower() and r.get("deKey"):
+        if indo_banco and r.get("deKey") and r["deKey"] != "RUSP":
             banco.setdefault(r["deKey"], {"recebidos": 0, "devolvidos": 0})["devolvidos"] += 1
 
     linhas = []

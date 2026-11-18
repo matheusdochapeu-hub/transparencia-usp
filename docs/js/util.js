@@ -2,6 +2,20 @@
 
 export const nf0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
 export const nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/** Ordena rótulos por número (ex.: "até 05 anos" antes de "11 - 20 anos"). */
+export function naturalCompare(a, b) {
+  const na = (String(a).match(/\d+/g) || []).map(Number);
+  const nb = (String(b).match(/\d+/g) || []).map(Number);
+  for (let i = 0; i < Math.max(na.length, nb.length); i++) {
+    const x = na[i];
+    const y = nb[i];
+    if (x == null) return -1;
+    if (y == null) return 1;
+    if (x !== y) return x - y;
+  }
+  return String(a).localeCompare(String(b), 'pt-BR');
+}
 export const nfCompact = new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 });
 
 export const fmtInt = (v) => (v == null || Number.isNaN(v) ? '–' : nf0.format(Math.round(v)));

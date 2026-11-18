@@ -23,18 +23,18 @@ empregos = estoque de empregos públicos alocados por unidade segundo o D.O.E. (
 | EESC — Escola de Eng de São Carlos | São Carlos | São Carlos | 102 | 290 | 82 | 2 | 0 | 2 |
 | SVOC — Serv Verif Óbitos da Capital | São Paulo | São Paulo | 29 | 44 | 26 | 2 | 0 | 2 |
 | HRAC — Hosp Reab Anomalias Craniofac | Bauru | Bauru | 356 | 397 | 8 | 1 | 0 | 1 |
-| RUSP — Reitoria da USP | São Paulo | São Paulo | 644 | 1509 | 147 | 0 | 0 | 0 |
+| RUSP — Reitoria da USP | São Paulo | São Paulo | 648 | 1509 | 147 | 0 | 0 | 0 |
 | FM — Fac de Medicina | São Paulo | São Paulo | 164 | 401 | 97 | 0 | 0 | 0 |
 | FMRP — Fac de Medicina de Rib Preto | Ribeirão Preto | Ribeirão Preto | 139 | 418 | 82 | 0 | 0 | 0 |
 | ESALQ — Esc Sup Agric "L de Queiroz" | Piracicaba | Piracicaba | 88 | 437 | 81 | 0 | 0 | 0 |
 | FSP — Fac de Saúde Pública | São Paulo | São Paulo | 98 | 217 | 76 | 0 | 0 | 0 |
 | FFLCH — Fac de Fil Let e Ciênc Humanas | São Paulo | São Paulo | 135 | 288 | 73 | 0 | 0 | 0 |
 | ICB — Inst de Ciências Biomédicas | São Paulo | São Paulo | 153 | 236 | 72 | 0 | 0 | 0 |
-| FE — Fac de Educação | São Paulo | São Paulo | 96 | 175 | 68 | 0 | 0 | 0 |
+| FE — Fac de Educação | São Paulo | São Paulo | 95 | 175 | 68 | 0 | 0 | 0 |
 | EP — Escola Politécnica | São Paulo | São Paulo | 134 | 378 | 61 | 0 | 0 | 0 |
 | ECA — Escola de Comunicações e Artes | São Paulo | São Paulo | 81 | 180 | 60 | 0 | 0 | 0 |
 | FOB — Fac de Odontologia de Bauru | Bauru | Bauru | 77 | 208 | 49 | 0 | 0 | 0 |
-| FCF — Fac de C Farmacêuticas | São Paulo | São Paulo | 70 | 121 | 48 | 0 | 0 | 0 |
+| FCF — Fac de C Farmacêuticas | São Paulo | São Paulo | 69 | 121 | 48 | 0 | 0 | 0 |
 | FO — Fac de Odontologia | São Paulo | São Paulo | 51 | 164 | 48 | 0 | 0 | 0 |
 | FD — Fac de Direito | São Paulo | São Paulo | 45 | 119 | 40 | 0 | 0 | 0 |
 | IQ — Inst de Química | São Paulo | São Paulo | 70 | 181 | 38 | 0 | 0 | 0 |
@@ -56,13 +56,13 @@ empregos = estoque de empregos públicos alocados por unidade segundo o D.O.E. (
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Lorena | Lorena | 2 | 66 | 40 | 0 | 32 | 32 |
 | São Carlos | São Carlos | 7 | 416 | 937 | 122 | 0 | 2 |
-| São Paulo | São Paulo | 47 | 3939 | 8354 | 1331 | 0 | 2 |
+| São Paulo | São Paulo | 47 | 3940 | 8354 | 1331 | 0 | 2 |
 | Bauru | Bauru | 4 | 467 | 787 | 59 | 0 | 1 |
 | Ribeirão Preto | Ribeirão Preto | 9 | 638 | 1554 | 150 | 0 | 0 |
 | Piracicaba | Piracicaba | 3 | 204 | 762 | 106 | 0 | 0 |
 | Pirassununga | Pirassununga | 2 | 159 | 293 | 27 | 0 | 0 |
 | Não identificado | — | 1 | 7 | 13 | 0 | 0 | 0 |
-| Órgãos centrais (RUSP) | São Paulo | 4 | 91 | 435 | 0 | 0 | 0 |
+| Órgãos centrais (RUSP) | São Paulo | 4 | 90 | 435 | 0 | 0 | 0 |
 
 ## Unidades que receberam empregos por redistribuição (últimos 3 anos)
 
@@ -89,6 +89,30 @@ empregos = estoque de empregos públicos alocados por unidade segundo o D.O.E. (
 | EE — Escola de Enfermagem | São Paulo | 1 | 0 | 2026-04-22 |
 | FD — Fac de Direito | São Paulo | 1 | 2 | 2026-07-21 |
 
+
+## Fluxo com a Reitoria / Banco de Reservas de Vagas (últimos 3 anos)
+
+Empregos que saíram da Reitoria/banco central para a unidade (recebidos) ou voltaram da unidade para lá (devolvidos).
+
+| Unidade | Cidade | Recebidos | Devolvidos |
+| --- | --- | ---: | ---: |
+| EEL — Escola de Engenharia de Lorena | Lorena | 2 | 0 |
+| PUSP-RP — Pref - Rib Preto | Ribeirão Preto | 1 | 0 |
+| IO — Inst Oceanográfico | São Paulo | 1 | 0 |
+| IEB — Inst de Estudos Brasileiros | São Paulo | 1 | 0 |
+| EACH — Escola de Artes, Ciênc. Human. | São Paulo | 1 | 0 |
+| MZ — Museu de Zoologia | São Paulo | 0 | 3 |
+| MAE — Museu Arqueologia e Etnologia | São Paulo | 0 | 2 |
+| ABCD — Agência de Bibl Colec Digitais | São Paulo | 0 | 2 |
+| EESC — Escola de Eng de São Carlos | São Carlos | 0 | 1 |
+| FM — Fac de Medicina | São Paulo | 0 | 1 |
+| FMRP — Fac de Medicina de Rib Preto | Ribeirão Preto | 0 | 1 |
+| ESALQ — Esc Sup Agric "L de Queiroz" | Piracicaba | 0 | 1 |
+| FSP — Fac de Saúde Pública | São Paulo | 0 | 1 |
+| ICB — Inst de Ciências Biomédicas | São Paulo | 0 | 1 |
+| FD — Fac de Direito | São Paulo | 0 | 1 |
+| IF — Inst de Física | São Paulo | 0 | 1 |
+| IAG — Inst Astron, Geof Ciênc Atmosf | São Paulo | 0 | 1 |
 
 ## Ressalvas
 

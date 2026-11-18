@@ -3,7 +3,7 @@
 import { store } from '../data.js';
 import { hBars, sparklineSVG } from '../charts.js';
 import { pageHead, card, seg, bindSegs, notice } from '../ui.js';
-import { esc, fmtInt, fmtSigned, debounce, nf1, downloadFile, toCSV } from '../util.js';
+import { esc, fmtInt, fmtSigned, debounce, nf1, naturalCompare, downloadFile, toCSV } from '../util.js';
 
 const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -243,7 +243,7 @@ export async function render(el) {
       if (st.status === 'gone' && to !== 0) continue;
       if (st.status === 'existing' && (from === 0 || to === 0)) continue;
       const label = src.labels[src.slugs[si]][li];
-      if (q && !norm(label).includes(q)) continue;
+      if (q && !(norm(label).includes(q) || norm(shortCat(src.slugs[si])).includes(q))) continue;
       out.push({ si, li, label, from, to, delta, pct, spark, slug: src.slugs[si] });
     }
     const dir = st.sortDir === 'asc' ? 1 : -1;
@@ -257,6 +257,7 @@ export async function render(el) {
       cat: (r) => norm(shortCat(r.slug)),
     }[st.sort];
     out.sort((a, b) => {
+      if (st.sort === 'label') return naturalCompare(a.label, b.label) * dir;
       const va = key(a);
       const vb = key(b);
       if (typeof va === 'string') return va.localeCompare(vb, 'pt-BR') * dir;
