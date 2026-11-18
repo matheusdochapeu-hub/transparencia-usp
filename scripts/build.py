@@ -214,6 +214,9 @@ UNIT_ALIAS = {"SIBi": "SIBI", "PUSPQSD": "PUSP-QSD"}
 EXTRA_CAMPUS = {"PUSP-QSD": "São Paulo"}
 
 
+RACE_MAP = {"Amar": "amar", "Bran": "bran", "Indig": "indig", "N/I": "ni", "Pard": "pard", "Pret": "pret"}
+
+
 def build_tecnicos() -> dict | None:
     """Quadro efetivo técnico-administrativo por carreira e unidade (Anuário, T2.14)."""
     vdir = os.path.join(ROOT, "data", "vagas")
@@ -270,7 +273,7 @@ def build_tecnicos() -> dict | None:
 
     payload = {
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "source": "Anuário Estatístico da USP — Tabela 2.14 (Servidores Técnicos e Administrativos)",
+        "source": "Anuário Estatístico da USP — Tabelas 2.14, 2.16 e 2.20",
         "sourceUrl": "https://uspdigital.usp.br/anuario/",
         "note": "Quadro EFETIVO (servidores providos). A USP não publica cargos em vacância para esta carreira.",
         "years": years,
@@ -279,6 +282,60 @@ def build_tecnicos() -> dict | None:
         "campus": campus_agg,
         "totals": totals,
     }
+
+    # ---- sexo por unidade (T2.16) ------------------------------------------
+    sex: dict[str, dict[str, dict[str, int]]] = {}
+    sex_totals: dict[str, dict[str, int]] = {}
+    for name in sorted((f for f in os.listdir(vdir) if re.fullmatch(r"T2\.16-\d{4}\.json", f)), key=lambda f: int(f[6:10])):
+        snap = read_json(os.path.join(vdir, name))
+        if not snap:
+            continue
+        y = str(snap["year"])
+        for unidade, sexo, total in snap["rows"]:
+            unidade = UNIT_ALIAS.get(re.sub(r"\s+", "", unidade), re.sub(r"\s+", "", unidade))
+            key = "f" if str(sexo).lower().startswith("f") else "m"
+            sex.setdefault(unidade, {}).setdefault(y, {"f": 0, "m": 0})[key] += total
+            sex_totals.setdefault(y, {"f": 0, "m": 0})[key] += total
+
+    # ---- raça/cor por unidade (T2.20, 2020+) -------------------------------
+    race: dict[str, dict[str, dict[str, int]]] = {}
+    race_totals: dict[str, dict[str, int]] = {}
+    empty_race = lambda: {"bran": 0, "pret": 0, "pard": 0, "amar": 0, "indig": 0, "ni": 0}  # noqa: E731
+    for name in sorted((f for f in os.listdir(vdir) if re.fullmatch(r"T2\.20-\d{4}\.json", f)), key=lambda f: int(f[6:10])):
+        snap = read_json(os.path.join(vdir, name))
+        if not snap:
+            continue
+        y = str(snap["year"])
+        for unidade, cat, raca, total in snap["rows"]:
+            unidade = UNIT_ALIAS.get(re.sub(r"\s+", "", unidade), re.sub(r"\s+", "", unidade))
+            rk = RACE_MAP.get(str(raca).strip())
+            if not rk:
+                continue
+            race.setdefault(unidade, {}).setdefault(y, empty_race())[rk] += total
+            race_totals.setdefault(y, empty_race())[rk] += total
+
+    if sex:
+        payload["sex"] = sex
+        payload["sexTotals"] = sex_totals
+    if race:
+        payload["race"] = race
+        payload["raceTotals"] = race_totals
+
+    # agrega sexo/raça por campus
+    for field, agg_key in (("sex", "sexCampus"), ("race", "raceCampus")):
+        if field not in payload:
+            continue
+        base = payload[field]
+        agg = {}
+        for u in units_meta:
+            vals = base.get(u["sigla"])
+            if not vals:
+                continue
+            for y, v in vals.items():
+                dest = agg.setdefault(u["campus"], {}).setdefault(y, {k: 0 for k in v})
+                for k, n in v.items():
+                    dest[k] += n
+        payload[agg_key] = agg
     write_if_changed(os.path.join(OUT, "tecnicos.json"), payload)
     last = str(years[-1])
     t = totals[last]

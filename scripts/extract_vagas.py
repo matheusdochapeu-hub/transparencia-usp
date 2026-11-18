@@ -31,6 +31,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "data", "vagas")
 XLS_URL = "https://uspdigital.usp.br/anuario/br/tabelas/XLS/{year}/T2.08.xls"
 XLS_T214 = "https://uspdigital.usp.br/anuario/br/tabelas/XLS/{year}/T2.14.xls"
+XLS_T216 = "https://uspdigital.usp.br/anuario/br/tabelas/XLS/{year}/T2.16.xls"
+XLS_T220 = "https://uspdigital.usp.br/anuario/br/tabelas/XLS/{year}/T2.20.xls"
 CAMPUS_NAMES = {
     "10": "São Paulo",
     "20": "Bauru",
@@ -183,6 +185,70 @@ def fetch_t214(year: int):
     return {"year": year, "rows": rows, "fetchedAt": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
 
+def _long_sheet(url: str, year: int):
+    """Abre a planilha e devolve (sheet, índice do cabeçalho, mapa de colunas)."""
+    xlrd = xlrd_module()
+    data = urllib.request.urlopen(urllib.request.Request(url.format(year=year), headers=UA), timeout=90).read()
+    sh = xlrd.open_workbook(file_contents=data).sheet_by_index(0)
+    header_row = None
+    for r in range(min(20, sh.nrows)):
+        if str(sh.cell_value(r, 0)).strip().lower().startswith("tipo de unidade"):
+            header_row = r
+            break
+    if header_row is None:
+        raise RuntimeError(f"cabeçalho não encontrado em {url.format(year=year)}")
+    cols = {}
+    for c in range(sh.ncols):
+        cols[str(sh.cell_value(header_row, c)).strip().lower()] = c
+    return sh, header_row, cols
+
+
+def fetch_t216(year: int):
+    """Sexo dos servidores técnico-administrativos por unidade (T2.16)."""
+    sh, header_row, cols = _long_sheet(XLS_T216, year)
+    need = ["unidade", "sexo", "categoria", "subcategoria", "total"]
+    if any(k not in cols for k in need):
+        raise RuntimeError(f"colunas inesperadas em 2.16/{year}")
+    rows = []
+    for r in range(header_row + 1, sh.nrows):
+        if str(sh.cell_value(r, cols["categoria"])).strip() != "Servidor":
+            continue
+        # edições antigas usam "Não-Docente" em vez de "Tec/Adm"
+        if str(sh.cell_value(r, cols["subcategoria"])).strip() not in ("Tec/Adm", "Não-Docente"):
+            continue
+        unidade = str(sh.cell_value(r, cols["unidade"])).strip()
+        sexo = str(sh.cell_value(r, cols["sexo"])).strip()
+        try:
+            total = int(round(float(sh.cell_value(r, cols["total"]))))
+        except (TypeError, ValueError):
+            continue
+        if not unidade or not sexo:
+            continue
+        rows.append([unidade, sexo, total])
+    return {"year": year, "rows": rows, "fetchedAt": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+
+
+def fetch_t220(year: int):
+    """Raça/cor dos servidores técnico-administrativos por unidade e categoria (T2.20)."""
+    sh, header_row, cols = _long_sheet(XLS_T220, year)
+    need = ["unidade", "categoria", "racacor", "total"]
+    if any(k not in cols for k in need):
+        raise RuntimeError(f"colunas inesperadas em 2.20/{year}")
+    rows = []
+    for r in range(header_row + 1, sh.nrows):
+        unidade = str(sh.cell_value(r, cols["unidade"])).strip()
+        cat = str(sh.cell_value(r, cols["categoria"])).strip()
+        raca = str(sh.cell_value(r, cols["racacor"])).strip()
+        try:
+            total = int(round(float(sh.cell_value(r, cols["total"]))))
+        except (TypeError, ValueError):
+            continue
+        if not unidade or not raca:
+            continue
+        rows.append([unidade, cat, raca, total])
+    return {"year": year, "rows": rows, "fetchedAt": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--map", action="store_true", help="refaz o mapa unidade -> campus")
@@ -222,6 +288,28 @@ def main() -> None:
                 pass
             else:
                 write_json(path, t214)
+
+        # sexo por unidade (técnicos)
+        try:
+            t216 = fetch_t216(year)
+        except Exception as exc:  # noqa: BLE001
+            print(f"{year}: T2.16 indisponível ({exc})")
+        else:
+            path = os.path.join(OUT, f"T2.16-{year}.json")
+            prev = read_json(path)
+            if not (prev and prev.get("rows") == t216["rows"]):
+                write_json(path, t216)
+
+        # raça/cor por unidade e categoria (a partir de 2020)
+        try:
+            t220 = fetch_t220(year)
+        except Exception:  # noqa: BLE001
+            continue
+        path = os.path.join(OUT, f"T2.20-{year}.json")
+        prev = read_json(path)
+        if not (prev and prev.get("rows") == t220["rows"]):
+            write_json(path, t220)
+
     print(f"{ok} anos processados em {OUT}")
 
 
