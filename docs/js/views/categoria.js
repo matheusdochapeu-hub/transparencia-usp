@@ -109,7 +109,8 @@ export async function render(el, slug) {
   if (isPyramid) {
     const rows = cat.labels
       .map((lab, li) => ({ lab, doc: cat.m.doc[li][lastI], tec: cat.m.tec[li][lastI] }))
-      .sort((a, b) => naturalCompare(a.lab, b.lab));
+      .sort((a, b) => naturalCompare(a.lab, b.lab))
+      .reverse(); // maiores/mais tempo no topo
     const max = Math.max(1, ...rows.map((r) => Math.max(r.doc, r.tec)));
     pyramidRows = rows
       .map(
