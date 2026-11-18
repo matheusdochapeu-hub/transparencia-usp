@@ -35,7 +35,7 @@ const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCa
 
 export async function render(el) {
   const { index } = store;
-  const n = index.refs.length;
+  const n = store.refs.length;
 
   el.innerHTML = `${pageHead({
     eyebrow: 'Analisar',
@@ -298,7 +298,7 @@ export async function render(el) {
     const xa = seriesFor(a), yb = seriesFor(b);
     const points = [];
     for (let i = 0; i < n; i++) {
-      if (xa[i] != null && yb[i] != null) points.push({ x: xa[i], y: yb[i], label: index.refs[i].label });
+      if (xa[i] != null && yb[i] != null) points.push({ x: xa[i], y: yb[i], label: store.refs[i].label });
     }
     const { r, n: nn } = corr(xa, yb);
     if (!Number.isFinite(r) || nn < 3) {

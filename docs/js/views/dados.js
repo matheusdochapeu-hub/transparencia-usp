@@ -6,8 +6,8 @@ import { esc, fmtInt, fmtSigned, toCSV, downloadFile, nf0 } from '../util.js';
 
 export async function render(el) {
   const { index } = store;
-  const refs = index.refs;
-  const T = index.totals;
+  const refs = store.refs;
+  const T = store.totals;
   const n = T.length;
 
   const rowsDesc = refs.map((r, i) => i).reverse();
@@ -33,7 +33,9 @@ export async function render(el) {
     ${pageHead({
       eyebrow: 'Dados abertos',
       title: 'Dados e exportações',
-      lead: `Série completa extraída do Portal da Transparência da USP: ${n} competências, 11 categorias, sem identificação individual. Baixe os arquivos brutos ou use os links abaixo.`,
+      lead: store.isGlobal
+        ? `Série completa extraída do Portal da Transparência da USP: ${n} competências, 11 categorias, sem identificação individual. Baixe os arquivos brutos ou use os links abaixo.`
+        : `Recorte atual: <b>${esc(store.scopeInfo.name)}</b> (${n} competências). A tabela abaixo reflete este recorte; os arquivos para download continuam sendo os consolidados da USP.`,
       actions: `<button class="btn primary" id="dlAll">Baixar totais (CSV)</button>`,
     })}
 

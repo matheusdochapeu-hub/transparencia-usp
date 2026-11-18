@@ -66,7 +66,7 @@ export async function render(el, slug) {
 
   el.innerHTML = `
     ${pageHead({
-      eyebrow: 'Categoria',
+      eyebrow: store.isGlobal ? 'Categoria' : `Recorte · ${esc(store.scopeInfo.name)}`,
       title: meta.title,
       lead: meta.description,
       actions: `<button class="btn" id="dlCat">Baixar CSV</button>`,

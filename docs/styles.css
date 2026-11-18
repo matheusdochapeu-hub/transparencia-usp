@@ -544,3 +544,18 @@ canvas, svg { max-width: 100%; }
   .hbar { grid-template-columns: minmax(70px, 44%) 1fr auto; }
   .donut-wrap { flex-direction: column; }
 }
+
+/* ------------------------------------------------------------- seletor de recorte */
+.scope-sel {
+  max-width: 230px;
+  font-size: .78rem;
+  padding: 6px 8px;
+  border-radius: 9px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.scope-sel:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+@media (max-width: 860px) {
+  .scope-sel { max-width: 150px; }
+}

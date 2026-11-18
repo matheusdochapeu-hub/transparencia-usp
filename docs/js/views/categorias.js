@@ -7,15 +7,15 @@ import { esc, fmtInt, fmtPct, fmtSigned } from '../util.js';
 
 export async function render(el) {
   const { index } = store;
-  const cards = index.cards || [];
-  const refs = index.refs;
-  const n = index.totals.length;
+  const cards = store.cards();
+  const refs = store.refs;
+  const n = store.totals.length;
 
   el.innerHTML = `
     ${pageHead({
-      eyebrow: 'Explorar',
+      eyebrow: store.isGlobal ? 'Explorar' : `Recorte · ${store.scopeInfo.name}`,
       title: 'Categorias',
-      lead: `Onze recortes do efetivo da USP — de classe e jornada a raça/cor e nacionalidade. Cada categoria tem série mensal desde ${esc(refs[0].label)} e tabelas comparativas entre períodos.`,
+      lead: `Onze recortes do efetivo — de classe e jornada a raça/cor e nacionalidade. Cada categoria tem série mensal desde ${esc(refs[0].label)} e tabelas comparativas entre períodos.`,
       actions: `<a class="btn" href="#/mudancas">Ranking de mudanças</a>`,
     })}
     <div class="grid auto">

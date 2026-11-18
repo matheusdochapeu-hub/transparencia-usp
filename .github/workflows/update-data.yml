@@ -47,6 +47,9 @@ jobs:
       - name: Cargos em vacância (Anuário Estatístico)
         run: python scripts/extract_vagas.py
 
+      - name: Recortes por campus e unidade
+        run: python scripts/extract_scope.py --months 24 --workers 4
+
       - name: Construir dados do painel
         run: python scripts/build.py
 

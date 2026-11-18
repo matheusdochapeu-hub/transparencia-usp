@@ -69,6 +69,43 @@ document.getElementById('menuBtn')?.addEventListener('click', () => {
 scrim?.addEventListener('click', closeMenu);
 nav?.addEventListener('click', (e) => { if (e.target.closest('a')) closeMenu(); });
 
+/* ------------------------------------------------------------------ recorte (escopo) */
+function fillScopeSelect() {
+  const sel = document.getElementById('scopeSel');
+  if (!sel) return;
+  const campi = store.scopes.filter((s) => s.type === 'campus');
+  const units = store.scopes.filter((s) => s.type === 'unit');
+  sel.innerHTML = `
+    <option value="usp">USP (geral)</option>
+    ${campi.length ? `<optgroup label="Campus">${campi.map((s) => `<option value="${esc(s.key)}">${esc(s.name)}</option>`).join('')}</optgroup>` : ''}
+    ${units.length ? `<optgroup label="Unidades">${units.map((s) => `<option value="${esc(s.key)}">${esc(s.name || s.unidade)}</option>`).join('')}</optgroup>` : ''}
+  `;
+  sel.value = store.scopeKey;
+  sel.addEventListener('change', async () => {
+    sel.disabled = true;
+    try {
+      await store.setScope(sel.value);
+      updatePeriodBadge();
+      await route();
+    } catch (e) {
+      console.error(e);
+      sel.value = store.scopeKey;
+    } finally {
+      sel.disabled = false;
+    }
+  });
+}
+
+function updatePeriodBadge() {
+  const refs = store.refs;
+  const el = document.getElementById('periodBadge');
+  if (el && refs.length) el.textContent = refs[refs.length - 1].label;
+  const upd = document.getElementById('updLabel');
+  if (upd && !store.isGlobal && store.scopeInfo) {
+    upd.textContent = `${store.scopeInfo.name} · até ${refs[refs.length - 1].label}`;
+  }
+}
+
 /* ------------------------------------------------------------------ rotas */
 const ROUTES = [
   { key: 'panorama', re: /^\/?$|^\/panorama$/, label: 'Panorama', mod: Panorama },
@@ -179,9 +216,11 @@ async function boot() {
 
   try {
     const index = await store.init();
-    const n = index.refs.length;
-    document.getElementById('periodBadge').textContent = index.refs[n - 1].label;
-    document.getElementById('updLabel').textContent = `Atualizado em ${fmtDate(index.generatedAt)}`;
+    fillScopeSelect();
+    updatePeriodBadge();
+    document.getElementById('updLabel').textContent = store.isGlobal
+      ? `Atualizado em ${fmtDate(index.generatedAt)}`
+      : `${store.scopeInfo.name} · até ${store.refs[store.refs.length - 1].label}`;
     document.title = 'Panorama · Transparência USP';
   } catch (e) {
     showError(e);

@@ -15,7 +15,9 @@ export async function render(el) {
     return;
   }
 
-  const st = { win: ch.windows.find((w) => w.key === '12m') ? '12m' : ch.windows[0].key, slug: '', q: '', showAll: false };
+  const st = { win: '', slug: '', q: '', showAll: false };
+  const WIN = ch.windows.filter((w) => !w.disabled);
+  st.win = (WIN.find((w) => w.key === '12m') || WIN[0]).key;
 
   const brokenCats = index.categories.filter((c) => (c.breaks || []).length);
 
@@ -37,7 +39,7 @@ export async function render(el) {
     }
     <div class="card" style="margin-bottom:16px">
       <div class="toolbar">
-        ${seg('win', ch.windows.map((w) => ({ v: w.key, label: w.label })), st.win)}
+        ${seg('win', WIN.map((w) => ({ v: w.key, label: w.label })), st.win)}
         <select id="catSel" aria-label="Filtrar categoria">
           <option value="">Todas as categorias</option>
           ${ch.slugs.map((s) => `<option value="${s}">${esc(index.categories.find((c) => c.slug === s)?.title || s)}</option>`).join('')}
@@ -102,7 +104,7 @@ export async function render(el) {
     const maxAbs = Math.max(...shown.map((r) => Math.max(r.from, r.to)), 1);
 
     el.querySelector('#count').textContent = `${rows.length} valores`;
-    el.querySelector('#tblSub').textContent = `${winMeta().label}: compara ${esc(index.refs[winMeta().fromRef].label)} com ${esc(index.refs[winMeta().toRef].label)}.`;
+    el.querySelector('#tblSub').textContent = `${winMeta().label}: compara ${esc(store.refs[winMeta().fromRef].label)} com ${esc(store.refs[winMeta().toRef].label)}.`;
     el.querySelector('#wrap').innerHTML = `<table class="data">
       <thead><tr><th>Valor</th><th>Categoria</th><th>Antes</th><th>Depois</th><th>Δ</th><th>Δ%</th><th>Tendência</th></tr></thead>
       <tbody>${shown
@@ -135,7 +137,7 @@ export async function render(el) {
 
   function redraw() {
     const wm = winMeta();
-    el.querySelector('#winLabel').textContent = `${index.refs[wm.fromRef].label} → ${index.refs[wm.toRef].label}`;
+    el.querySelector('#winLabel').textContent = `${store.refs[wm.fromRef].label} → ${store.refs[wm.toRef].label}`;
     drawBars();
     drawTable();
   }

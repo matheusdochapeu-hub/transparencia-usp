@@ -14,9 +14,10 @@ const VINC = [
 
 export async function render(el) {
   const { index } = store;
-  const n = index.totals.length;
-  const refs = index.refs;
-  const T = index.totals;
+  const T = store.totals;
+  const refs = store.refs;
+  const n = T.length;
+  const moversAll = store.movers();
   const last = T[n - 1];
   const prev12 = T[Math.max(0, n - 13)];
   const first = T[0];
@@ -49,7 +50,7 @@ export async function render(el) {
     )
     .join('')}</div>`;
 
-  const movers = (index.movers?.lastMonth || []).slice(0, 8);
+  const movers = (moversAll?.lastMonth || []).slice(0, 8);
   const moverRows = movers
     .map((m) => {
       const meta = index.categories.find((c) => c.slug === m.slug);
@@ -76,8 +77,8 @@ export async function render(el) {
 
   el.innerHTML = `
     ${pageHead({
-      eyebrow: 'Portal da Transparência · USP',
-      title: 'Panorama do efetivo',
+      eyebrow: store.isGlobal ? 'Portal da Transparência · USP' : `Recorte · ${store.scopeInfo.type === 'campus' ? 'Campus' : 'Unidade'}`,
+      title: store.isGlobal ? 'Panorama do efetivo' : `Panorama · ${store.scopeInfo.name}`,
       lead: `Série histórica de ${fmtInt(n)} competências mensais (${esc(refs[0].label)} a ${esc(refs[n - 1].label)}), organizada para comparação. Dados públicos e agregados, sem identificação de pessoas.`,
       actions: `<a class="btn" href="#/dados">Ver dados brutos</a><button class="btn primary" id="dlTotais">Baixar série (CSV)</button>`,
     })}
@@ -112,7 +113,7 @@ export async function render(el) {
         </div>
         ${moverRows ? `<div class="table-wrap" style="max-height:none"><table class="data"><thead><tr><th>Valor</th><th>Antes</th><th>Depois</th><th>Δ</th></tr></thead><tbody>${moverRows}</tbody></table></div>` : '<div class="empty">Sem variações registradas.</div>'}
       </section>
-      <section class="card">
+      <section class="card" id="campusCard">
         <div class="card-head"><div><h3>Efetivo por campus</h3><p>${esc(refs[n - 1].label)} · soma dos campi equivale ao total da USP.</p></div></div>
         <div id="campusBars"><div class="skeleton" style="height:210px"></div></div>
         <p class="hint" id="vacHint" style="margin-top:12px"></p>
@@ -177,7 +178,11 @@ export async function render(el) {
     downloadFile('usp-totais-servidores.csv', toCSV(header, rows));
   });
 
-  // campi
+  // campi (só faz sentido no recorte USP)
+  if (!store.isGlobal) {
+    el.querySelector('#campusCard')?.remove();
+    return;
+  }
   const campus = await store.campus();
   const box = el.querySelector('#campusBars');
   if (!box) return;
@@ -190,8 +195,8 @@ export async function render(el) {
     .sort((a, b) => b.value - a.value);
   hBars(box, { items, fmt: fmtInt });
 
-  // vacância de docentes (Anuário) — resumo com link
-  const vac = index.vacancia;
+  // vacância de docentes (Anuário) — resumo com link (apenas recorte USP)
+  const vac = store.isGlobal ? index.vacancia : null;
   const hint = el.querySelector('#vacHint');
   if (vac?.available && vac.totals && hint) {
     const t = vac.totals;

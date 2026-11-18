@@ -36,6 +36,12 @@ ranking de mudanças e análise de correlações.
 As categorias disponíveis são: **Categoria (vínculo), Classe, Faixa Etária, Formação Acadêmica,
 Função, Função Estrutura, Jornada, Nacionalidade, Raça/Cor, Sexo e Tempo USP.**
 
+### Recorte por campus e unidade
+
+O seletor no topo filtra **todo o painel** por campi (histórico completo, 2015–2026) ou por
+unidade (últimos 24 meses): panorama, categorias, comparador de períodos e ranking de mudanças
+passam a refletir apenas aquele recorte. Deep link: `?scope=campus-10` ou `?scope=unit-EACH`.
+
 ## Fonte e cobertura
 
 - **Fonte principal:** Portal da Transparência da USP — “Busca de Servidores”.

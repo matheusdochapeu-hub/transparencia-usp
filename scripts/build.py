@@ -289,6 +289,142 @@ def build_tecnicos() -> dict | None:
     return payload
 
 
+def _norm_scope_rows(rows) -> list[list]:
+    """Aceita linhas em dict (formato antigo) ou array (compacto)."""
+    out = []
+    for r in rows or []:
+        if isinstance(r, dict):
+            out.append(
+                [
+                    r.get("label") or "Total",
+                    int(r.get("doc") or 0),
+                    int(r.get("tecAdm") or 0),
+                    int(r.get("docApos") or 0),
+                    int(r.get("tecAdmApos") or 0),
+                ]
+            )
+        else:
+            out.append([r[0] or "Total", int(r[1] or 0), int(r[2] or 0), int(r[3] or 0), int(r[4] or 0)])
+    return out
+
+
+def build_scopes() -> list[dict]:
+    """Converte os recortes (campus/unidade) para o formato compacto do app."""
+    sdir = os.path.join(ROOT, "data", "scope")
+    outdir = os.path.join(OUT, "scope")
+    if not os.path.isdir(sdir):
+        return []
+    os.makedirs(outdir, exist_ok=True)
+    refs_meta = read_json(os.path.join(RAW, "_refs.json")) or {}
+    scope_ref_labels = {r["id"]: (r.get("label") or r["id"]) for r in refs_meta.get("refs", [])}
+
+    scopes = []
+    for fname in sorted(os.listdir(sdir)):
+        if not fname.endswith(".json"):
+            continue
+        raw = read_json(os.path.join(sdir, fname))
+        if not raw or not raw.get("refs"):
+            continue
+        key = raw.get("key") or fname[:-5]
+        # só competências com total oficial publicado
+        ref_ids = sorted(
+            r for r, cats in raw["refs"].items()
+            if sum(
+                row[1] + row[2] + row[3] + row[4]
+                for row in _norm_scope_rows(cats.get("categoria"))
+            ) > 0
+        )
+        if not ref_ids:
+            continue
+        labels_by_slug = {}
+        cats_out = {}
+        for slug in ORDER:
+            per_ref = []
+            union = set()
+            for rid in ref_ids:
+                rows = _norm_scope_rows((raw["refs"][rid] or {}).get(slug))
+                if slug == "categoria":
+                    tot = _norm_scope_rows((raw["refs"][rid] or {}).get("categoria"))
+                    t = tot[0] if tot else [0, 0, 0, 0, 0]
+                    agg = {
+                        "Docente": [t[1], 0, 0, 0],
+                        "Técnico Administrativo": [0, t[2], 0, 0],
+                        "Docente Aposentado": [0, 0, t[3], 0],
+                        "Técnico Administrativo Aposentado": [0, 0, 0, t[4]],
+                    }
+                else:
+                    agg = defaultdict(lambda: [0, 0, 0, 0])
+                    for row in rows:
+                        k = norm_label(row[0])
+                        v = agg[k]
+                        v[0] += row[1]
+                        v[1] += row[2]
+                        v[2] += row[3]
+                        v[3] += row[4]
+                per_ref.append(agg)
+                union.update(agg.keys())
+            totals_by_label = defaultdict(int)
+            for agg in per_ref:
+                for label, vals in agg.items():
+                    totals_by_label[label] += sum(vals)
+            labels = sorted(union, key=lambda l: (-totals_by_label[l], l))
+            if slug == "categoria":
+                fixed = ["Docente", "Técnico Administrativo", "Docente Aposentado", "Técnico Administrativo Aposentado"]
+                labels = [l for l in fixed if l in union] + [l for l in labels if l not in fixed]
+            lidx = {l: i for i, l in enumerate(labels)}
+            rows = []
+            for ri, agg in enumerate(per_ref):
+                for label, vals in agg.items():
+                    if any(vals):
+                        rows.append([ri, lidx[label], vals[0], vals[1], vals[2], vals[3]])
+            labels_by_slug[slug] = labels
+            cats_out[slug] = {"labels": labels, "rows": rows}
+
+        totals = []
+        for rid in ref_ids:
+            t = _norm_scope_rows(((raw["refs"][rid] or {}).get("categoria")) or [])
+            t = t[0] if t else [0, 0, 0, 0, 0]
+            totals.append([t[1], t[2], t[3], t[4]])
+
+        payload = {
+            "key": key,
+            "type": raw.get("type") or "campus",
+            "name": raw.get("name") or key,
+            "campus": raw.get("campus") or "",
+            "unidade": raw.get("unidade") or "",
+            "refs": [{"id": r, "label": scope_ref_labels.get(r, r)} for r in ref_ids],
+            "categories": cats_out,
+            "totals": totals,
+        }
+        write_json(os.path.join(outdir, key + ".json"), payload)
+        scopes.append(
+            {
+                "key": key,
+                "type": payload["type"],
+                "name": payload["name"],
+                "campus": payload["campus"],
+                "unidade": payload["unidade"],
+                "nRefs": len(ref_ids),
+                "first": ref_ids[0],
+                "last": ref_ids[-1],
+                "totalActive": totals[-1][0] + totals[-1][1],
+                "totalAll": sum(totals[-1]),
+            }
+        )
+
+    scopes.sort(key=lambda s: (0 if s["type"] == "campus" else 1, s["name"]))
+    write_json(
+        os.path.join(OUT, "scopes.json"),
+        {"generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"), "scopes": scopes},
+    )
+    size = sum(
+        os.path.getsize(os.path.join(outdir, f)) for f in os.listdir(outdir) if f.endswith(".json")
+    ) / 1024 / 1024
+    print(f"  recortes: {len(scopes)} ({sum(1 for s in scopes if s['type']=='campus')} campi, "
+          f"{sum(1 for s in scopes if s['type']=='unit')} unidades) | {size:.1f} MB")
+    return scopes
+
+
 def main():
     refs_meta = read_json(os.path.join(RAW, "_refs.json"))
     if not refs_meta:
@@ -645,6 +781,7 @@ def main():
     # ---- vacância de docentes (Anuário) -------------------------------------
     vacancia = build_vacancia()
     tecnicos = build_tecnicos()
+    build_scopes()
 
     # ---- índice -------------------------------------------------------------
     index = {
