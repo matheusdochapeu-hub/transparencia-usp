@@ -83,7 +83,11 @@ function xTickIdx(n, width) {
   const step = Math.ceil((n - 1) / (maxLabels - 1));
   const out = [];
   for (let i = 0; i < n; i += step) out.push(i);
-  if (out[out.length - 1] !== n - 1) out.push(n - 1);
+  if (out[out.length - 1] !== n - 1) {
+    // evita rótulos colados na ponta direita
+    if (out.length > 1 && n - 1 - out[out.length - 1] < step * 0.65) out[out.length - 1] = n - 1;
+    else out.push(n - 1);
+  }
   return out;
 }
 

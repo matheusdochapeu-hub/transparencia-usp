@@ -92,6 +92,23 @@ def write_csv(path, header, rows):
         w.writerows(rows)
 
 
+def _strip_volatile(obj):
+    if isinstance(obj, dict):
+        return {k: _strip_volatile(v) for k, v in obj.items() if k != "generatedAt"}
+    if isinstance(obj, list):
+        return [_strip_volatile(v) for v in obj]
+    return obj
+
+
+def write_index_if_changed(path: str, obj) -> bool:
+    """Evita reescrever o índice quando só o timestamp mudaria."""
+    prev = read_json(path)
+    if prev is not None and _strip_volatile(prev) == _strip_volatile(obj):
+        return False
+    write_json(path, obj)
+    return True
+
+
 def norm_label(text: str) -> str:
     text = (text or "").strip()
     text = re.sub(r"\s+", " ", text)
@@ -131,11 +148,10 @@ def main():
             continue
         total = sum(
             (row.get("doc") or 0) + (row.get("tecAdm") or 0) + (row.get("docApos") or 0) + (row.get("tecAdmApos") or 0)
-            for rows in snap["categories"].values()
-            for row in rows
+            for row in (snap["categories"].get("categoria") or [])
         )
         if total == 0:
-            print(f"  (ignorando {r['id']}: sem dados publicados)")
+            print(f"  (ignorando {r['id']}: competência sem total oficial)")
             continue
         months.append(snap)
 
@@ -494,7 +510,8 @@ def main():
             "totalAll": sum(totals[-1]),
         },
     }
-    write_json(os.path.join(OUT, "index.json"), index)
+    changed = write_index_if_changed(os.path.join(OUT, "index.json"), index)
+    print(f"  index.json {'atualizado' if changed else 'sem mudanças'}")
 
     # ---- diagnóstico de consistência ---------------------------------------
     print("\nConsistência (soma por categoria vs total do mês):")

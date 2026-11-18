@@ -31,7 +31,15 @@ Função, Função Estrutura, Jornada, Nacionalidade, Raça/Cor, Sexo e Tempo US
 - **Fonte:** Portal da Transparência da USP — “Busca de Servidores”.
 - **Cobertura:** Jul/2015 até a competência mais recente (o limite inicial é do próprio portal).
 - **Granularidade:** mensal, contagens agregadas.
+- **Campi:** 7 (São Paulo, Bauru, Piracicaba, Pirassununga, São Carlos, Ribeirão Preto, Lorena).
 - **Privacidade:** nenhum dado individual; apenas totais já publicados pela USP.
+
+### Validação
+
+- A soma de cada categoria confere, mês a mês, com o total oficial de vínculos.
+- A soma dos 7 campi confere com o total da USP na competência.
+- Os números foram conferidos contra o **export CSV do próprio portal** (mesmo endpoint de “Exportar CSV” da página).
+- Lacunas do portal (ex.: jul/2026, sem publicação) são omitidas da série em vez de virar zero.
 
 ## Como a extração funciona
 

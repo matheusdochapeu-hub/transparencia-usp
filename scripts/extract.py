@@ -258,6 +258,26 @@ def load_json(path: str, default=None):
         return default
 
 
+VOLATILE = {"fetchedAt", "checkedAt"}
+
+
+def _strip_volatile(obj):
+    if isinstance(obj, dict):
+        return {k: _strip_volatile(v) for k, v in obj.items() if k not in VOLATILE}
+    if isinstance(obj, list):
+        return [_strip_volatile(v) for v in obj]
+    return obj
+
+
+def write_if_changed(path: str, obj) -> bool:
+    """Só grava se os dados mudaram (ignora timestamps), mantendo o diff limpo."""
+    prev = load_json(path)
+    if prev is not None and _strip_volatile(prev) == _strip_volatile(obj):
+        return False
+    write_json(path, obj)
+    return True
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--full", action="store_true", help="rebaixa todo o histórico")
@@ -280,7 +300,7 @@ def main():
     discovered = discover_procedures(sess)
     for slug, (proc, _desc) in discovered.items():
         proc_map[slug] = proc
-    write_json(os.path.join(args.out, "_refs.json"), {"refs": refs, "procedures": proc_map})
+    write_if_changed(os.path.join(args.out, "_refs.json"), {"refs": refs, "procedures": proc_map})
 
     todo = refs
     if args.only:
@@ -300,11 +320,14 @@ def main():
         dest = os.path.join(args.out, r["id"] + ".json")
         log(f"[{i}/{len(todo)}] {r['id']} ({r['label']}) ...")
         cats = fetch_categories(sess, proc_map, r["serverDate"])
-        total = sum(
+        # A competência só é válida se o total oficial (categoria "Total") existe.
+        # Sem ele, o mês está incompleto no portal (já vimos meses com apenas
+        # uma das 11 categorias publicada).
+        official = sum(
             row["doc"] + row["tecAdm"] + row["docApos"] + row["tecAdmApos"]
-            for rows in cats.values()
-            for row in rows
+            for row in (cats.get("categoria") or [])
         )
+        total = official or 0
         if total == 0:
             # O portal não publicou esta competência (lacuna real) ou houve
             # indisponibilidade momentânea. Nunca sobrescrevemos um snapshot bom.
@@ -312,8 +335,7 @@ def main():
                 prev = load_json(dest) or {}
                 prev_total = sum(
                     row.get("doc", 0) + row.get("tecAdm", 0) + row.get("docApos", 0) + row.get("tecAdmApos", 0)
-                    for rows in (prev.get("categories") or {}).values()
-                    for row in rows
+                    for row in ((prev.get("categories") or {}).get("categoria") or [])
                 )
                 if prev_total > 0:
                     log("    portal devolveu vazio; mantendo snapshot anterior")
@@ -322,7 +344,7 @@ def main():
             log("    sem dados publicados para esta competência (lacuna do portal)")
             missing.append({"ref": r["id"], "label": r["label"], "checkedAt": datetime.now(timezone.utc).isoformat(timespec="seconds")})
             continue
-        write_json(
+        changed = write_if_changed(
             dest,
             {
                 "ref": r["id"],
@@ -333,7 +355,7 @@ def main():
             },
         )
         n = sum(len(v) for v in cats.values())
-        log(f"    {n} linhas em {len(cats)} categorias ({time.time() - t0:.0f}s)")
+        log(f"    {n} linhas em {len(cats)} categorias{' (sem mudanças)' if not changed else ''} ({time.time() - t0:.0f}s)")
 
     if missing:
         write_json(os.path.join(args.out, "_missing.json"), {"missing": missing})
@@ -342,41 +364,56 @@ def main():
     if args.with_campus:
         campuses = call_with_retry(sess, "listarCampus")
         camps = [{"code": str(c.get("codcam")), "name": c.get("nomcam")} for c in campuses]
-        write_json(os.path.join(args.out, "..", "raw-campus-meta.json"), {"campuses": camps})
-        rows = []
-        total_calls = len(camps) * len(refs)
-        k = 0
+        write_if_changed(os.path.join(args.out, "..", "raw-campus-meta.json"), {"campuses": camps})
+
+        prev = load_json(os.path.join(args.out, "campus-series.json")) or {}
+        prev_rows = {(r["ref"], str(r["campus"])): r for r in prev.get("rows", [])}
+        recent = set() if args.full else {r["id"] for r in refs[-max(args.refresh_last, 0):]}
+
+        # monta a lista de (competência, campus) que realmente precisa ser consultada
+        cached_rows, todo_campus = [], []
         for r in refs:
             for c in camps:
-                k += 1
-                try:
-                    out = call_with_retry(
-                        sess, "listarInfoServidor", proc_map["categoria"], r["serverDate"], "", c["code"]
-                    )
-                except Exception as exc:  # noqa: BLE001
-                    log(f"    campus {c['code']} {r['id']}: {exc}")
-                    continue
-                if not out:
-                    continue
-                row = out[0]
-                rows.append(
-                    {
-                        "ref": r["id"],
-                        "campus": c["code"],
-                        "doc": int(row.get("doc") or 0),
-                        "tecAdm": int(row.get("tecAdm") or 0),
-                        "docApos": int(row.get("docApos") or 0),
-                        "tecAdmApos": int(row.get("tecAdmApos") or 0),
-                    }
+                key = (r["id"], c["code"])
+                if not args.full and key in prev_rows and r["id"] not in recent:
+                    cached_rows.append(prev_rows[key])
+                else:
+                    todo_campus.append((r, c))
+
+        log(f"Campus: {len(todo_campus)} consultas novas, {len(cached_rows)} reaproveitadas")
+        rows = []
+        for k, (r, c) in enumerate(todo_campus, 1):
+            try:
+                out = call_with_retry(
+                    sess, "listarInfoServidor", proc_map["categoria"], r["serverDate"], "", c["code"]
                 )
-                if k % 60 == 0:
-                    log(f"    campus {k}/{total_calls}")
-                time.sleep(0.1)
-        write_json(
+            except Exception as exc:  # noqa: BLE001
+                log(f"    campus {c['code']} {r['id']}: {exc}")
+                continue
+            if not out:
+                continue
+            row = out[0]
+            rows.append(
+                {
+                    "ref": r["id"],
+                    "campus": c["code"],
+                    "doc": int(row.get("doc") or 0),
+                    "tecAdm": int(row.get("tecAdm") or 0),
+                    "docApos": int(row.get("docApos") or 0),
+                    "tecAdmApos": int(row.get("tecAdmApos") or 0),
+                }
+            )
+            if k % 60 == 0:
+                log(f"    campus {k}/{len(todo_campus)}")
+            time.sleep(0.1)
+
+        all_rows = cached_rows + rows
+        all_rows.sort(key=lambda x: (x["ref"], x["campus"]))
+        write_if_changed(
             os.path.join(args.out, "campus-series.json"),
-            {"campuses": camps, "rows": rows, "fetchedAt": datetime.now(timezone.utc).isoformat(timespec="seconds")},
+            {"campuses": camps, "rows": all_rows, "fetchedAt": datetime.now(timezone.utc).isoformat(timespec="seconds")},
         )
-        log(f"Campus: {len(rows)} linhas.")
+        log(f"Campus: {len(all_rows)} linhas.")
 
     if args.campus_categories and refs:
         latest = refs[-1]
@@ -401,7 +438,7 @@ def main():
                     for row in out
                 ]
                 time.sleep(0.1)
-        write_json(
+        write_if_changed(
             os.path.join(args.out, "campus-categories.json"),
             {
                 "ref": latest["id"],
