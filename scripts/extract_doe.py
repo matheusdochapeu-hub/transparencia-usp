@@ -662,61 +662,57 @@ def build_ledger(rows, years):
     dist = [r for r in rows if r["tipo"] == "distribuicao"]
     mov = [r for r in rows if r["tipo"] in ("redistribuicao", "transferencia")]
 
-    def when(row):
-        return (row.get("data") or "", row.get("portaria") or "")
-
-    dist.sort(key=when)
-    mov.sort(key=when)
-
-    stock = defaultdict(lambda: defaultdict(int))
-    total_dist = 0
-    for r in dist:
-        if not r.get("paraKey"):
-            continue
-        stock[r["paraKey"]][classe_key(r["classe"])] += r["qtd"]
-        total_dist += r["qtd"]
-
     # classe de cada emprego numerado (as redistribuições a informam)
     classe_por_emprego = {
         r["emprego"]: classe_key(r["classe"]) for r in mov if r.get("emprego") and r.get("classe")
     }
 
-    series = defaultdict(dict)
+    stock = defaultdict(lambda: defaultdict(int))
     negative, orphan, sem_classe = [], 0, 0
+    total_dist = 0
     por_ano = defaultdict(lambda: {"distribuicao": 0, "redistribuicao": 0})
 
-    def snapshot(year):
-        keys = set(stock) | {r["deKey"] for r in mov if r.get("deKey")} | \
-               {r["paraKey"] for r in mov if r.get("paraKey")}
-        for key in keys:
-            series[year][key] = sum(stock[key].values())
-
-    if dist:
-        cur_year = dist[0]["ano"]
-        for r in dist:
-            while cur_year < r["ano"]:
-                snapshot(cur_year)
-                cur_year += 1
-            por_ano[r["ano"]]["distribuicao"] += r["qtd"]
-
-    for r in mov:
-        ck = classe_key(r["classe"])
-        if ck == "out" and r.get("emprego"):
-            ck = classe_por_emprego.get(r["emprego"], "out")
+    def apply(row):
+        nonlocal total_dist, orphan, sem_classe
+        if row["tipo"] == "distribuicao":
+            if not row.get("paraKey"):
+                return
+            stock[row["paraKey"]][classe_key(row["classe"])] += row["qtd"]
+            total_dist += row["qtd"]
+            por_ano[row["ano"]]["distribuicao"] += row["qtd"]
+            return
+        ck = classe_key(row["classe"])
+        if ck == "out" and row.get("emprego"):
+            ck = classe_por_emprego.get(row["emprego"], "out")
         if ck == "out":
             sem_classe += 1
-            continue
-        if not r.get("deKey") or not r.get("paraKey"):
+            return
+        if not row.get("deKey") or not row.get("paraKey"):
             orphan += 1
-            continue
-        stock[r["deKey"]][ck] -= 1
-        if stock[r["deKey"]][ck] < 0:
-            negative.append(f"{r['data']} {r['portaria']} {r['emprego']} ({r['de']})")
-        stock[r["paraKey"]][ck] += 1
-        por_ano[r["ano"]]["redistribuicao"] += 1
+            return
+        stock[row["deKey"]][ck] -= 1
+        if stock[row["deKey"]][ck] < 0:
+            negative.append(f"{row['data']} {row['portaria']} {row['emprego']} ({row['de']})")
+        stock[row["paraKey"]][ck] += 1
+        por_ano[row["ano"]]["redistribuicao"] += 1
 
-    for y in years:
-        snapshot(y)
+    eventos = [(r.get("data") or "", 0 if r["tipo"] == "distribuicao" else 1,
+                r.get("portaria") or "", r) for r in dist + mov]
+    eventos.sort(key=lambda e: e[:3])
+
+    series, idx = {}, 0
+    for y in sorted(years):
+        limite = f"{y:04d}-12-31"
+        while idx < len(eventos) and eventos[idx][0] <= limite:
+            apply(eventos[idx][3])
+            idx += 1
+        series[str(y)] = {k: sum(v.values()) for k, v in stock.items()}
+    # eventos sem data (raros) entram até o último ano
+    while idx < len(eventos):
+        apply(eventos[idx][3])
+        idx += 1
+    if years:
+        series[str(max(years))] = {k: sum(v.values()) for k, v in stock.items()}
 
     units = []
     for key, classes in stock.items():
@@ -732,7 +728,7 @@ def build_ledger(rows, years):
         "estoqueTotal": sum(u["total"] for u in units),
         "unidades": len(units),
         "movimentos": len(mov),
-        "series": {str(y): series.get(y, {}) for y in years},
+        "series": {str(y): series.get(str(y), {}) for y in years},
         "porAno": {str(y): dict(v) for y, v in sorted(por_ano.items())},
         "unidadesDetalhe": units,
         "negativos": negative[:40],

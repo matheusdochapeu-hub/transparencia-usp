@@ -11,7 +11,7 @@ const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCa
 const VINC_OPTS = [
   { v: 'total', label: 'Todos' },
   { v: 'doc', label: 'Docentes' },
-  { v: 'tec', label: 'Técnicos' },
+  { v: 'tec', label: 'Servidores' },
   { v: 'apos', label: 'Aposentados' },
 ];
 
