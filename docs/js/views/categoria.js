@@ -291,15 +291,22 @@ export async function render(el, slug) {
 
   function drawTable() {
     const { cols, lis, cur, first, delta, pct } = tableData();
+    const showCols = cols.slice().reverse(); // mais recente primeiro
     const limit = st.showAll ? lis.length : Math.min(lis.length, 60);
     const shown = lis.slice(0, limit);
 
     let maxCell = 0;
     for (const li of shown) for (const ri of cols) maxCell = Math.max(maxCell, value(li, ri));
 
+    const pinStyle = (v, max) => {
+      const s = heatStyle(v, max);
+      const m = s.match(/rgba\(var\(--heat-rgb\),([\d.]+)\)/);
+      return `--heat-a:${m ? m[1] : 0}`;
+    };
+
     const head = `<tr>
       <th class="sortable ${st.sortKey === 'label' ? 'sorted' : ''}" data-sort="label">Valor <span class="arrow">↕</span></th>
-      ${cols.map((ri) => `<th>${esc(refs[ri].label)}</th>`).join('')}
+      ${showCols.map((ri, k) => `<th class="${k === 0 ? 'cmp-pin' : ''}">${esc(refs[ri].label)}</th>`).join('')}
       <th class="sortable ${st.sortKey === 'delta' ? 'sorted' : ''}" data-sort="delta">Δ <span class="arrow">↕</span></th>
       <th class="sortable ${st.sortKey === 'pct' ? 'sorted' : ''}" data-sort="pct">Δ% <span class="arrow">↕</span></th>
       <th>Tendência</th>
@@ -313,7 +320,13 @@ export async function render(el, slug) {
         const spark = sparklineSVG(cols.map((ri) => value(li, ri)), colorAt(li), 76, 22, false);
         return `<tr data-li="${li}" style="cursor:pointer"${focused}>
           <td title="${esc(cat.labels[li])}"><span class="row-label"><span class="t">${esc(cat.labels[li])}</span></span></td>
-          ${cols.map((ri) => `<td class="num" style="${heatStyle(value(li, ri), maxCell)}">${fmtV(value(li, ri))}</td>`).join('')}
+          ${showCols
+            .map((ri, k) =>
+              k === 0
+                ? `<td class="num cmp-pin" style="${pinStyle(value(li, ri), maxCell)}">${fmtV(value(li, ri))}</td>`
+                : `<td class="num" style="${heatStyle(value(li, ri), maxCell)}">${fmtV(value(li, ri))}</td>`
+            )
+            .join('')}
           <td class="num">${d > 0 ? `<span class="delta up">${fmtSignedV(d)}</span>` : d < 0 ? `<span class="delta down">${fmtSignedV(d)}</span>` : '<span class="dim">0</span>'}</td>
           <td class="num ${p > 0 ? '' : p < 0 ? '' : 'dim'}" style="color:${p > 0 ? 'var(--pos)' : p < 0 ? 'var(--neg)' : 'inherit'}">${p == null ? '–' : `${p > 0 ? '+' : ''}${nf1.format(p)}%`}</td>
           <td>${spark}</td>
@@ -323,11 +336,14 @@ export async function render(el, slug) {
 
     const foot = `<tr>
       <td>Total (${shown.length}${lis.length > shown.length ? ` de ${lis.length}` : ''} valores)</td>
-      ${cols.map((ri) => `<td class="num">${fmtV(shown.reduce((a, li) => a + value(li, ri), 0))}</td>`).join('')}
+      ${showCols.map((ri, k) => `<td class="num${k === 0 ? ' cmp-pin' : ''}">${fmtV(shown.reduce((a, li) => a + value(li, ri), 0))}</td>`).join('')}
       <td colspan="3"></td>
     </tr>`;
 
     el.querySelector('#tWrap').innerHTML = `<table class="data"><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table>`;
+    const tbl = el.querySelector('#tWrap table');
+    const w1 = tbl?.querySelector('tbody tr td:first-child')?.getBoundingClientRect().width;
+    if (tbl && w1) tbl.style.setProperty('--pin-left', `${Math.round(w1)}px`);
     el.querySelector('#tableCount').textContent = `${lis.length} valores · ${cols.length} períodos`;
 
     el.querySelectorAll('#tWrap th[data-sort]').forEach((th) => {

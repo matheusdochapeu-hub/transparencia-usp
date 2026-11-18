@@ -357,6 +357,21 @@ table.data tbody tr:hover td:first-child { background: color-mix(in srgb, var(--
 table.data tbody tr:last-child td { border-bottom: 0; }
 table.data td.num { font-variant-numeric: tabular-nums; }
 table.data td.dim { color: var(--muted); }
+
+/* coluna do período mais recente fixa ao rolar a tabela comparativa */
+table.data .cmp-pin {
+  position: sticky;
+  left: var(--pin-left, 0px);
+  z-index: 2;
+  background: linear-gradient(
+      rgba(var(--heat-rgb), var(--heat-a, 0)),
+      rgba(var(--heat-rgb), var(--heat-a, 0))
+    ),
+    var(--panel);
+  box-shadow: 1px 0 0 var(--line), -1px 0 0 var(--line);
+}
+table.data thead th.cmp-pin { z-index: 5; background: var(--panel-2); }
+table.data tfoot td.cmp-pin { background: var(--panel-2); }
 table.data tfoot td { border-top: 1px solid var(--line-strong); font-weight: 650; background: var(--panel-2); position: sticky; bottom: 0; }
 table.data tfoot td:first-child { background: var(--panel-2); }
 
