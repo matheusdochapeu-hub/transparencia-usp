@@ -29,7 +29,6 @@ ranking de mudanças e análise de correlações.
 | **Categorias** | 11 recortes, cada um com evolução mensal, tabela comparativa por período e comparador de dois meses |
 | **Mudanças** | Ranking de todos os valores por variação (1 mês, 12 meses, 5 anos, série completa) |
 | **Vacância** | Cargos de docente autorizados vs. providos (**vago/provido**) por unidade e campus, 2014–2025 |
-| **Vagas TA** | Empregos públicos alocados pelo D.O.E., defasagem por unidade/campus/**classe**, aposentadorias e fluxo do banco de vagas — **estimativas**, não quadro oficial |
 | **Servidores** | Quadro efetivo da carreira técnico-administrativa por carreira (**Básico, Técnico, Superior**), **sexo** (2014–2025) e **raça/cor** (2020–2025), por unidade/campus |
 | **Vencimentos** | Tabela salarial do DRH (grau/faixa × letra, classes B/T/S) com evolução **nominal e real** contra **IPCA, IGP-M e INPC** (2011–2026) |
 | **Movimento** | Saldo líquido anual do quadro técnico-administrativo por campus/unidade — quem ganhou e quem perdeu servidores, e em que ano |
@@ -129,7 +128,10 @@ Não há etapa de build para o front-end: é HTML/CSS/JS puro (ES modules), sem 
 
 ## Empregos públicos e vagas técnico-administrativas
 
-![Aba Vagas TA — estimativas por unidade, campus e classe](assets/preview-vagas-ta.png)
+> **Em desenvolvimento — ainda não publicado no painel.** A extração do D.O.E. e o
+> cruzamento com efetivo/aposentadorias estão prontos (`scripts/extract_doe.py`,
+> `scripts/analise_vagas.py`, `docs/data/vagas-tecnicos.json`), mas a aba está fora do
+> menu enquanto o UX e os critérios de "vaga" são revistos.
 
 A USP aloca **empregos públicos** (CLT, criados pela LC 1.074/2008) por portaria no D.O.E.
 O script `scripts/extract_doe.py` baixa esse acervo — portal `doe.sp.gov.br` para 2023+,

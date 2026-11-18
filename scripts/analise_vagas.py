@@ -285,6 +285,11 @@ def main() -> None:
             ({"nome": n, "empregos": v} for n, v in (doe_func.get(sigla) or {}).items()),
             key=lambda x: -x["empregos"],
         )[:10]
+        # variação do efetivo em 5 anos (ou desde o primeiro ano com série)
+        anos_passado = [str(y) for y in anos_tec if y <= int(ult) - 5]
+        ano5 = anos_passado[-1] if anos_passado else str(anos_tec[0])
+        serie5 = dados.get(ano5) or {}
+        efetivo5a = sum(int(serie5.get(k, 0)) for k in ("bas", "tec", "sup", "out"))
         linhas.append({
             "sigla": sigla,
             "nome": meta.get("name") or next((u.get("name") for u in (tec.get("units") or []) if u["sigla"] == sigla), sigla),
@@ -293,6 +298,9 @@ def main() -> None:
             "empregos": empregos,
             "efetivo": efetivo,
             "efetivoAno": int(ult),
+            "efetivo5a": efetivo5a,
+            "deltaEfetivo5a": efetivo - efetivo5a,
+            "razaoEmpregosEfetivo": round(empregos / efetivo, 2) if efetivo else None,
             "semEfetivo": sem_efetivo,
             "aposentados": apos,
             "apos12m": apos12,
