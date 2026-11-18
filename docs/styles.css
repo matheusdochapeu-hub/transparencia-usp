@@ -559,3 +559,6 @@ canvas, svg { max-width: 100%; }
 @media (max-width: 860px) {
   .scope-sel { max-width: 150px; }
 }
+
+/* garante que [hidden] vença display:flex de componentes */
+[hidden] { display: none !important; }

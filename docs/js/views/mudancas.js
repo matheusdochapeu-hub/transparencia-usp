@@ -1,4 +1,4 @@
-/* Ranking de mudanças entre períodos, com filtros. */
+/* Ranking de mudanças entre períodos, com filtros e período personalizado. */
 
 import { store } from '../data.js';
 import { hBars, sparklineSVG } from '../charts.js';
@@ -24,6 +24,8 @@ export async function render(el) {
     el.innerHTML = pageHead({ title: 'Mudanças', lead: 'Ranking indisponível.' });
     return;
   }
+  const refs = store.refs;
+  const n = refs.length;
 
   const WIN = ch.windows.filter((w) => !w.disabled);
   const st = {
@@ -39,13 +41,19 @@ export async function render(el) {
     showAll: false,
   };
 
+  // período personalizado
+  let custom = null;
+  let customKey = '';
+  let token = 0;
+
   const brokenCats = index.categories.filter((c) => (c.breaks || []).length);
+  const options = refs.map((r, i) => `<option value="${i}">${esc(r.label)}</option>`).join('');
 
   el.innerHTML = `
     ${pageHead({
       eyebrow: 'Comparar',
       title: 'O que mudou',
-      lead: 'Ranking de todas as categorias pela variação de efetivo entre duas competências. Filtre por valor, categoria, direção ou magnitude — os gráficos e a tabela respondem aos filtros.',
+      lead: 'Ranking de todas as categorias pela variação de efetivo entre duas competências. Escolha uma janela pronta ou defina um período personalizado, e filtre por valor, categoria, direção ou magnitude.',
     })}
     ${
       brokenCats.length
@@ -60,7 +68,17 @@ export async function render(el) {
 
     <div class="card" style="margin-bottom:16px">
       <div class="toolbar" style="margin-bottom:10px">
-        ${seg('win', WIN.map((w) => ({ v: w.key, label: w.label })), st.win)}
+        ${seg('win', [...WIN.map((w) => ({ v: w.key, label: w.label })), { v: 'custom', label: 'Personalizado' }], st.win)}
+        <div id="customWrap" class="toolbar" style="gap:8px" hidden>
+          <div class="field" style="gap:3px">
+            <label for="fromSel">De</label>
+            <select id="fromSel" aria-label="Mês inicial">${options}</select>
+          </div>
+          <div class="field" style="gap:3px">
+            <label for="toSel">Até</label>
+            <select id="toSel" aria-label="Mês final">${options}</select>
+          </div>
+        </div>
         <select id="catSel" aria-label="Filtrar categoria">
           <option value="">Todas as categorias</option>
           ${ch.slugs.map((s) => `<option value="${s}">${esc(index.categories.find((c) => c.slug === s)?.title || s)}</option>`).join('')}
@@ -133,24 +151,89 @@ export async function render(el) {
     </div>
   `;
 
-  const winMeta = () => ch.windows.find((w) => w.key === st.win);
+  const fromSel = el.querySelector('#fromSel');
+  const toSel = el.querySelector('#toSel');
+  fromSel.value = String(Math.max(0, n - 25));
+  toSel.value = String(n - 1);
+
+  const activeCh = () => (st.win === 'custom' ? custom : ch);
+  const winMeta = () => activeCh().windows.find((w) => w.key === st.win) || activeCh().windows[0];
   const shortCat = (slug) => index.categories.find((c) => c.slug === slug)?.title || slug;
 
+  /** Calcula o delta entre dois meses arbitrários a partir das séries completas. */
+  async function buildCustom(fromIdx, toIdx) {
+    const cats = await store.allCategories();
+    const labels = {};
+    const rows = [];
+    for (let si = 0; si < ch.slugs.length; si++) {
+      const slug = ch.slugs[si];
+      const cat = cats.find((c) => c.slug === slug);
+      if (!cat) continue;
+      labels[slug] = cat.labels;
+      const span = toIdx - fromIdx;
+      const k = Math.min(14, span + 1);
+      for (let li = 0; li < cat.labels.length; li++) {
+        const series = cat.m.total[li];
+        const a = series[fromIdx] || 0;
+        const b = series[toIdx] || 0;
+        const delta = b - a;
+        if (Math.abs(delta) < 3 && Math.max(a, b) < 5) continue;
+        const spark = [];
+        for (let i = 0; i < k; i++) spark.push(series[fromIdx + Math.round((i * span) / Math.max(1, k - 1))] || 0);
+        rows.push([0, si, li, a, b, delta, a ? (delta / a) * 100 : null, spark]);
+      }
+    }
+    return {
+      windows: [{ key: 'custom', label: `${refs[fromIdx].label} → ${refs[toIdx].label}`, fromRef: fromIdx, toRef: toIdx }],
+      slugs: ch.slugs,
+      labels,
+      rows,
+    };
+  }
+
+  async function ensureCustom(showLoading = true) {
+    let from = Number(fromSel.value);
+    let to = Number(toSel.value);
+    if (from >= to) {
+      if (from > to) {
+        const tmp = from;
+        from = to;
+        to = tmp;
+        fromSel.value = String(from);
+        toSel.value = String(to);
+      } else {
+        to = Math.min(n - 1, from + 1);
+        toSel.value = String(to);
+      }
+    }
+    const key = `${from}-${to}`;
+    if (custom && customKey === key) return custom;
+    const my = ++token;
+    if (showLoading) el.querySelector('#wrap').innerHTML = '<div class="empty">Calculando período personalizado…</div>';
+    const data = await buildCustom(from, to);
+    if (my !== token) return null;
+    custom = data;
+    customKey = key;
+    return custom;
+  }
+
   function allLabels() {
+    const src = activeCh();
     const set = new Set();
-    const slugs = st.slug ? [st.slug] : ch.slugs;
-    for (const s of slugs) for (const l of ch.labels[s] || []) set.add(l);
+    const slugs = st.slug ? [st.slug] : src.slugs;
+    for (const s of slugs) for (const l of src.labels[s] || []) set.add(l);
     return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }
 
   function filtered() {
-    const wi = ch.windows.findIndex((w) => w.key === st.win);
-    const slugIdx = st.slug ? ch.slugs.indexOf(st.slug) : -1;
+    const src = activeCh();
+    const wi = src.windows.findIndex((w) => w.key === st.win);
+    const slugIdx = st.slug ? src.slugs.indexOf(st.slug) : -1;
     const q = st.q ? norm(st.q) : '';
     const out = [];
-    for (const row of ch.rows) {
+    for (const row of src.rows) {
       const [w, si, li, from, to, delta, pct, spark] = row;
-      if (w !== wi) continue;
+      if (w !== (wi < 0 ? 0 : wi)) continue;
       if (slugIdx >= 0 && si !== slugIdx) continue;
       if (st.dir === 'up' && delta <= 0) continue;
       if (st.dir === 'down' && delta >= 0) continue;
@@ -159,9 +242,9 @@ export async function render(el) {
       if (st.status === 'new' && from !== 0) continue;
       if (st.status === 'gone' && to !== 0) continue;
       if (st.status === 'existing' && (from === 0 || to === 0)) continue;
-      const label = ch.labels[ch.slugs[si]][li];
+      const label = src.labels[src.slugs[si]][li];
       if (q && !norm(label).includes(q)) continue;
-      out.push({ si, li, label, from, to, delta, pct, spark, slug: ch.slugs[si] });
+      out.push({ si, li, label, from, to, delta, pct, spark, slug: src.slugs[si] });
     }
     const dir = st.sortDir === 'asc' ? 1 : -1;
     const key = {
@@ -198,7 +281,8 @@ export async function render(el) {
 
   function sortHeader(key) {
     const arrow = st.sort === key ? (st.sortDir === 'desc' ? ' ↓' : ' ↑') : ' ↕';
-    return `<th class="sortable ${st.sort === key ? 'sorted' : ''}" data-sort="${key}">${key === 'label' ? 'Valor' : key === 'cat' ? 'Categoria' : key === 'from' ? 'Antes' : key === 'to' ? 'Depois' : key === 'delta' ? 'Δ' : 'Δ%'}<span class="arrow">${arrow}</span></th>`;
+    const label = key === 'label' ? 'Valor' : key === 'cat' ? 'Categoria' : key === 'from' ? 'Antes' : key === 'to' ? 'Depois' : key === 'delta' ? 'Δ' : 'Δ%';
+    return `<th class="sortable ${st.sort === key ? 'sorted' : ''}" data-sort="${key}">${label}<span class="arrow">${arrow}</span></th>`;
   }
 
   function drawTable() {
@@ -276,15 +360,28 @@ export async function render(el) {
     drawTable();
   }
 
+  async function setWin(v) {
+    st.win = v;
+    el.querySelector('#customWrap').hidden = v !== 'custom';
+    st.showAll = false;
+    if (v === 'custom') {
+      try {
+        const data = await ensureCustom();
+        if (!data) return;
+      } catch (e) {
+        console.error(e);
+        el.querySelector('#wrap').innerHTML = `<div class="empty">Não foi possível calcular o período: ${esc(e.message || e)}</div>`;
+        return;
+      }
+    }
+    redraw();
+  }
+
   bindSegs(el, (k, v) => {
-    if (k === 'win') { st.win = v; st.showAll = false; redraw(); }
+    if (k === 'win') setWin(v);
     if (k === 'dir') { st.dir = v; st.showAll = false; redraw(); }
   });
-  el.querySelector('#catSel').addEventListener('change', (e) => {
-    st.slug = e.target.value;
-    st.showAll = false;
-    redraw();
-  });
+  el.querySelector('#catSel').addEventListener('change', (e) => { st.slug = e.target.value; st.showAll = false; redraw(); });
   el.querySelector('#minDelta').addEventListener('change', (e) => { st.minDelta = Number(e.target.value); st.showAll = false; redraw(); });
   el.querySelector('#minPct').addEventListener('change', (e) => { st.minPct = Number(e.target.value); st.showAll = false; redraw(); });
   el.querySelector('#status').addEventListener('change', (e) => { st.status = e.target.value; st.showAll = false; redraw(); });
@@ -294,6 +391,8 @@ export async function render(el) {
     drawTable();
   });
   el.querySelector('#q').addEventListener('input', debounce((e) => { st.q = e.target.value.trim(); st.showAll = false; redraw(); }, 160));
+  fromSel.addEventListener('change', async () => { await ensureCustom(); redraw(); });
+  toSel.addEventListener('change', async () => { await ensureCustom(); redraw(); });
 
   el.querySelector('#clear').addEventListener('click', () => {
     Object.assign(st, { slug: '', q: '', dir: 'all', minDelta: 0, minPct: 0, status: 'all', showAll: false });
@@ -308,10 +407,11 @@ export async function render(el) {
 
   el.querySelector('#csv').addEventListener('click', () => {
     const rows = filtered();
-    const header = ['valor', 'categoria', 'antes', 'depois', 'delta', 'delta_pct'];
+    const header = ['valor', 'categoria', 'antes', 'depois', 'delta', 'delta_pct', 'periodo_de', 'periodo_ate'];
+    const wm = winMeta();
     downloadFile(
       `usp-mudancas-${st.win}.csv`,
-      toCSV(header, rows.map((r) => [r.label, shortCat(r.slug), r.from, r.to, r.delta, r.pct == null ? '' : r.pct]))
+      toCSV(header, rows.map((r) => [r.label, shortCat(r.slug), r.from, r.to, r.delta, r.pct == null ? '' : r.pct, store.refs[wm.fromRef].label, store.refs[wm.toRef].label]))
     );
   });
 
