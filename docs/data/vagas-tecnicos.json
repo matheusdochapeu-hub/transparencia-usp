@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-18T16:49:46+00:00",
+ "generatedAt": "2026-11-18T16:52:49+00:00",
  "anoReferencia": 2026,
  "metodo": "empregos = estoque de empregos públicos alocados por unidade segundo o D.O.E. (distribuições e redistribuições); efetivo = técnico-administrativos ativos no Portal da Transparência; vagasMin = max(0, empregos - efetivo); apos12m = novas aposentadorias de técnico-administrativos em 12 meses; vagasPot = vagasMin + apos12m.",
  "aviso": "O efetivo do Anuário reúne servidores de todos os regimes (cargos e empregos). vagasMin é um limite inferior: só aparecem vagas quando os empregos alocados superam o efetivo total da unidade. Para o número exato seria necessário o quadro de lotação do DRH.",
