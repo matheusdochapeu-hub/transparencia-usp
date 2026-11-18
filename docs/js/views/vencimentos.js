@@ -84,6 +84,11 @@ export async function render(el) {
 
     <div class="grid cols-4" style="margin-bottom:16px" id="kpis"></div>
 
+    <div class="section card" style="margin-bottom:16px">
+      <div class="card-head"><div><h3>Se o índice tivesse sido aplicado</h3><p id="corrSub"></p></div></div>
+      <div id="corrGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:10px"></div>
+    </div>
+
     <div class="section card">
       <div class="card-head">
         <div><h3>Evolução do vencimento</h3><p id="chartSub"></p></div>
@@ -100,13 +105,6 @@ export async function render(el) {
     <div class="section card">
       <div class="card-head"><div><h3>Tabela vigente · ${esc(last)}</h3><p>Grau/faixa × letra, com as classes que ocupam cada grau. Fonte: DRH/USP.</p></div></div>
       <div class="table-wrap" id="grid" style="max-height:none"></div>
-    </div>
-
-    <div class="section card">
-      <div class="card-head">
-        <div><h3>Se o índice tivesse sido aplicado</h3><p id="corrSub"></p></div>
-      </div>
-      <div class="table-wrap" id="corrTable" style="max-height:560px"></div>
     </div>
 
     <div class="section">${notice(
@@ -207,45 +205,26 @@ export async function render(el) {
         .join('')}</tbody>
     </table>`;
 
-    // ---- salário se o índice tivesse sido aplicado ----------------------
+    // ---- cards: se o índice tivesse sido aplicado -----------------------
     const fIdx = factor(currentIdx(), base, last);
-    const combos = [];
-    for (const classe of Object.keys(venc.classes)) {
-      for (const letra of LETTERS) {
-        const b0 = valueAt(eds[0], classe, letra);
-        const cur = valueAt(eds[eds.length - 1], classe, letra);
-        const corr = b0 * fIdx;
-        combos.push({
-          classe, letra, b0, cur, corr,
-          nom: (cur / b0 - 1) * 100,
-          real: (cur / corr - 1) * 100,
-        });
-      }
-    }
-    const abaixo = combos.filter((c) => c.real < 0).length;
-    const media = combos.reduce((a, c) => a + c.real, 0) / combos.length;
-    el.querySelector('#corrSub').innerHTML =
-      `Salário de ${esc(base)} corrigido apenas pelo <b>${IDX[st.idx]}</b> (${fmtPct((fIdx - 1) * 100)} no período) ` +
-      `comparado com o salário atual. <b>${abaixo} de ${combos.length}</b> combinações classe/letra perderam poder de compra; ` +
-      `perda média de <b>${fmtPct(Math.abs(media))}</b>.`;
-    el.querySelector('#corrTable').innerHTML = `<table class="data">
-      <thead><tr>
-        <th>Classe</th><th>Letra</th><th>${esc(base)}</th><th>Atual (${esc(last)})</th><th>Se só o ${IDX[st.idx]}</th><th>Δ nominal</th><th>Δ real (ganho/perda)</th>
-      </tr></thead>
-      <tbody>${combos
-        .map(
-          (c) => `<tr>
-            <td><b>${esc(c.classe)}</b></td>
-            <td>${esc(c.letra)}</td>
-            <td class="num">${money(c.b0)}</td>
-            <td class="num">${money(c.cur)}</td>
-            <td class="num">${money(c.corr)}</td>
-            <td class="num">${c.nom > 0 ? '+' : ''}${fmtPct(c.nom)}</td>
-            <td class="num" style="color:${c.real >= 0 ? 'var(--pos)' : 'var(--neg)'};font-weight:600">${c.real > 0 ? '+' : ''}${fmtPct(c.real)}</td>
-          </tr>`
-        )
-        .join('')}</tbody>
-    </table>`;
+    const b0 = valueAt(eds[0], classe, letra);
+    const curV = valueAt(eds[eds.length - 1], classe, letra);
+    const corr = b0 * fIdx;
+    const nomPct = (curV / b0 - 1) * 100;
+    const realPct = (curV / corr - 1) * 100;
+
+    el.querySelector('#corrSub').textContent =
+      `${classe} · letra ${letra} — salário de ${base} corrigido apenas pelo ${IDX[st.idx]} ` +
+      `(${fmtPct((fIdx - 1) * 100)} no período), comparado com o salário atual.`;
+    el.querySelector('#corrGrid').innerHTML = `
+      <div class="kpi" style="--kc:var(--muted)"><span class="k-label">Classe</span><span class="k-value">${esc(classe)}</span></div>
+      <div class="kpi" style="--kc:var(--muted)"><span class="k-label">Letra</span><span class="k-value">${esc(letra)}</span></div>
+      <div class="kpi" style="--kc:var(--c3)"><span class="k-label">${esc(base)}</span><span class="k-value" style="font-size:1.05rem">${money(b0)}</span></div>
+      <div class="kpi" style="--kc:var(--brand)"><span class="k-label">Atual (${esc(last)})</span><span class="k-value" style="font-size:1.05rem">${money(curV)}</span></div>
+      <div class="kpi" style="--kc:var(--c2)"><span class="k-label">Só ${IDX[st.idx]}</span><span class="k-value" style="font-size:1.05rem">${money(corr)}</span></div>
+      <div class="kpi" style="--kc:var(--c4)"><span class="k-label">Variação nominal</span><span class="k-value">${nomPct > 0 ? '+' : ''}${fmtPct(nomPct)}</span></div>
+      <div class="kpi" style="--kc:${realPct >= 0 ? 'var(--pos)' : 'var(--neg)'}"><span class="k-label">Real (ganho/perda)</span><span class="k-value" style="color:${realPct >= 0 ? 'var(--pos)' : 'var(--neg)'}">${realPct > 0 ? '+' : ''}${fmtPct(realPct)}</span></div>
+    `;
   }
 
   bindSegs(el, (k, v) => {
