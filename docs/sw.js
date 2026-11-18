@@ -1,6 +1,6 @@
 ﻿/* Service worker: app shell offline + dados com atualizaÃ§Ã£o em segundo plano. */
 
-const VERSION = 'v21';
+const VERSION = 'v22';
 const SHELL = `usp-shell-${VERSION}`;
 const DATA = `usp-data-${VERSION}`;
 

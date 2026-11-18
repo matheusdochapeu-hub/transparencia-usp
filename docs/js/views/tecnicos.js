@@ -297,13 +297,17 @@ export async function render(el) {
   function rows() {
     const prevY = years.length > 1 ? String(years[years.length - 2]) : last;
     const fiveY = String(years[Math.max(0, years.length - 6)]);
+    const pick = (v) => (st.career === 'all' ? sumObj(v) : v[st.career] || 0);
     let list = scopedUnits
       .map((u) => {
         const v = unitCareer(u, last);
         const total = sumObj(v);
-        const prev = sumObj(unitCareer(u, prevY));
-        const five = sumObj(unitCareer(u, fiveY));
-        return { ...u, ...v, total, d1: total - prev, d5: total - five };
+        const cur = pick(v);
+        return {
+          ...u, ...v, total,
+          d1: cur - pick(unitCareer(u, prevY)),
+          d5: cur - pick(unitCareer(u, fiveY)),
+        };
       })
       .filter((r) => r.total > 0);
     if (st.unit) list = list.filter((r) => r.sigla === st.unit);
@@ -338,7 +342,7 @@ export async function render(el) {
         <th class="sortable ${st.sort === 'sigla' ? 'sorted' : ''}" data-sort="sigla">Unidade</th>
         ${scoped ? '' : '<th>Campus</th>'}
         ${cols.map((c) => `<th class="sortable ${st.sort === c.key ? 'sorted' : ''}" data-sort="${c.key}">${esc(c.name)}</th>`).join('')}
-        <th class="sortable ${st.sort === 'total' ? 'sorted' : ''}" data-sort="total">${st.career === 'all' ? 'Total' : esc(cols[0].name)}</th>
+        <th class="sortable ${st.sort === 'total' ? 'sorted' : ''}" data-sort="total">Total</th>
         <th class="sortable ${st.sort === 'd1' ? 'sorted' : ''}" data-sort="d1">Δ 1 ano</th>
         <th class="sortable ${st.sort === 'd5' ? 'sorted' : ''}" data-sort="d5">Δ 5 anos</th>
         <th>% do total</th>
