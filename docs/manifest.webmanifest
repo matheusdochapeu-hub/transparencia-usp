@@ -1,0 +1,26 @@
+{
+  "name": "Transparência USP — Servidores",
+  "short_name": "Transparência USP",
+  "description": "Série histórica do efetivo de servidores da USP por categoria, classe, formação, jornada, raça/cor, sexo e mais. Dados abertos do Portal da Transparência.",
+  "id": "/transparencia-usp/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f5f6f8",
+  "theme_color": "#8a1538",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["government", "education", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Panorama", "url": "./#/panorama", "description": "Visão geral do efetivo" },
+    { "name": "Categorias", "url": "./#/categorias", "description": "Séries por categoria" },
+    { "name": "Mudanças", "url": "./#/mudancas", "description": "Ranking de variações" }
+  ]
+}
