@@ -61,8 +61,7 @@ def read_json(path, default=None):
 
 def scope_unit(sigla: str):
     """Última competência do recorte da unidade: doc, tecAdm, docApos, tecApos."""
-    path = os.path.join(ROOT, "data", "scope", f"unit-{sigla}.json")
-    raw = read_json(path)
+    raw = read_json(os.path.join(ROOT, "data", "scope", f"unit-{sigla}.json"))
     if not raw or not raw.get("refs"):
         return None
     refs = sorted(raw["refs"])
@@ -94,6 +93,37 @@ def scope_unit(sigla: str):
         "ref": ref, "docentes": doc, "efetivo": tec,
         "docentesAposentados": doc_apos, "aposentados": tec_apos, "apos12m": apos12,
     }
+
+
+def scope_funcoes(sigla: str, limite: int = 12):
+    """Servidores ativos por função na última competência do recorte da unidade."""
+    raw = read_json(os.path.join(ROOT, "data", "scope", f"unit-{sigla}.json"))
+    if not raw or not raw.get("refs"):
+        return []
+    refs = sorted(raw["refs"])
+    for ref in reversed(refs):
+        rows = (raw["refs"].get(ref) or {}).get("funcao") or []
+        if not rows:
+            continue
+        itens = []
+        for row in rows:
+            if isinstance(row, dict):
+                nome = row.get("label") or row.get("nome")
+                valor = row.get("tecAdm", row.get("tec", 0))
+            else:
+                # [label, doc, tecAdm, docApos, tecAdmApos]
+                nome = row[0]
+                valor = row[2] if len(row) > 2 else 0
+            try:
+                valor = int(valor or 0)
+            except (TypeError, ValueError):
+                valor = 0
+            if nome and valor:
+                itens.append((str(nome), valor))
+        if itens:
+            itens.sort(key=lambda x: -x[1])
+            return [{"nome": n, "ativos": v} for n, v in itens[:limite]]
+    return []
 
 
 def write_markdown(payload: dict, destino: str) -> None:
@@ -216,6 +246,13 @@ def main() -> None:
             banco.setdefault(r["deKey"], {"recebidos": 0, "devolvidos": 0})["devolvidos"] += 1
 
     linhas = []
+    series_ledger = ledger.get("series", {})
+    unidades_ledger = {u["key"]: u.get("classes", {}) for u in ledger.get("unidadesDetalhe", [])}
+    doe_func = {}
+    for r in rows:
+        if r["tipo"] == "distribuicao" and r.get("categoria") and r.get("paraKey"):
+            doe_func.setdefault(r["paraKey"], {})
+            doe_func[r["paraKey"]][r["categoria"]] = doe_func[r["paraKey"]].get(r["categoria"], 0) + r["qtd"]
     for sigla, dados in (tec.get("data") or {}).items():
         anos_tec = sorted(int(y) for y in dados)
         if not anos_tec:
@@ -235,6 +272,19 @@ def main() -> None:
         campus = meta.get("campus") or next((u.get("campus") for u in (tec.get("units") or []) if u["sigla"] == sigla), "")
         m = mov.get(sigla, {})
         b = banco.get(sigla, {})
+        classes_ledger = unidades_ledger.get(sigla, {})
+        classes = {}
+        for k in ("bas", "tec", "sup"):
+            e = int(classes_ledger.get(k, 0))
+            f = int(serie_tec.get(k, 0))
+            classes[k] = {
+                "empregos": e, "efetivo": f,
+                "vagasMin": None if sem_efetivo else max(0, e - f),
+            }
+        funcoes_doe = sorted(
+            ({"nome": n, "empregos": v} for n, v in (doe_func.get(sigla) or {}).items()),
+            key=lambda x: -x["empregos"],
+        )[:10]
         linhas.append({
             "sigla": sigla,
             "nome": meta.get("name") or next((u.get("name") for u in (tec.get("units") or []) if u["sigla"] == sigla), sigla),
@@ -254,6 +304,10 @@ def main() -> None:
             "movUltimo": m.get("ultimo", ""),
             "recebidosBanco": b.get("recebidos", 0),
             "devolvidosBanco": b.get("devolvidos", 0),
+            "classes": classes,
+            "funcoesAtivas": scope_funcoes(sigla),
+            "funcoesDoe": funcoes_doe,
+            "historico": {y: int((series_ledger.get(y) or {}).get(sigla, 0)) for y in sorted(series_ledger)},
         })
     linhas.sort(key=lambda l: (-(l["vagasPot"] if l["vagasPot"] is not None else -1),
                                -(l["vagasMin"] if l["vagasMin"] is not None else -1),
@@ -265,7 +319,8 @@ def main() -> None:
             "campus": l["campus"], "cidade": l["cidade"],
             "unidades": 0, "empregos": 0, "efetivo": 0, "aposentados": 0,
             "apos12m": 0, "vagasMin": 0, "vagasPot": 0, "movGanhos": 0, "movPerdas": 0,
-            "recebidosBanco": 0, "devolvidosBanco": 0, "semEfetivo": 0,
+            "recebidosBanco": 0, "devolvidosBanco": 0, "semEfetivo": 0, "historico": {},
+            "classes": {k: {"empregos": 0, "efetivo": 0, "vagasMin": 0} for k in ("bas", "tec", "sup")},
         })
         c["unidades"] += 1
         for k in ("empregos", "efetivo", "aposentados", "movGanhos", "movPerdas",
@@ -275,6 +330,13 @@ def main() -> None:
         c["vagasMin"] += l["vagasMin"] or 0
         c["vagasPot"] += l["vagasPot"] or 0
         c["semEfetivo"] += 1 if l["semEfetivo"] else 0
+        for k in ("bas", "tec", "sup"):
+            cls = l["classes"][k]
+            c["classes"][k]["empregos"] += cls["empregos"]
+            c["classes"][k]["efetivo"] += cls["efetivo"]
+            c["classes"][k]["vagasMin"] += cls["vagasMin"] or 0
+        for y, v in (l.get("historico") or {}).items():
+            c["historico"][y] = c["historico"].get(y, 0) + int(v or 0)
     campi_lista = sorted(campi.values(), key=lambda c: -c["vagasPot"])
 
     total_empregos = sum(l["empregos"] for l in linhas)
@@ -296,6 +358,7 @@ def main() -> None:
 
     payload = {
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "natureza": "estimativa",
         "anoReferencia": ano,
         "metodo": (
             "empregos = estoque de empregos públicos alocados por unidade segundo o D.O.E. "
@@ -304,11 +367,30 @@ def main() -> None:
             "aposentadorias de técnico-administrativos em 12 meses; vagasPot = vagasMin + apos12m."
         ),
         "aviso": (
-            "O efetivo do Anuário reúne servidores de todos os regimes (cargos e empregos). "
-            "vagasMin é um limite inferior: só aparecem vagas quando os empregos alocados "
-            "superam o efetivo total da unidade. Para o número exato seria necessário o quadro "
-            "de lotação do DRH."
+            "Estimativas, não um quadro oficial de vagas. O efetivo do Anuário reúne servidores "
+            "de todos os regimes (cargos e empregos); o D.O.E. informa quanto foi alocado a cada "
+            "unidade, mas não quantos desses empregos estão ocupados. vagasMin é um limite "
+            "inferior: só aparece vaga quando os empregos alocados superam o efetivo total da "
+            "unidade. O número exato exige o quadro de lotação do DRH — pedido em aberto."
         ),
+        "comoLer": [
+            "Empregos: total de empregos públicos que o D.O.E. alocou à unidade ao longo da série "
+            "(distribuições menos redistribuições).",
+            "Efetivo: técnico-administrativos ativos na competência mais recente.",
+            "Vagas mínimas: empregos acima do efetivo — é o mínimo que está necessariamente vago.",
+            "Vagas potenciais: vagas mínimas + aposentadorias de TA nos últimos 12 meses.",
+            "Classe: Básico, Técnico ou Superior — o mesmo recorte usado nos concursos e nas "
+            "permutas; a soma das classes pode não fechar com o total porque há empregos sem "
+            "classe identificada no D.O.E.",
+            "Fluxo com a Reitoria: empregos que saíram do banco central para a unidade (recebidos) "
+            "ou voltaram da unidade para lá (devolvidos) nos últimos 3 anos.",
+        ],
+        "cobertura": {
+            "empregosIdentificados": total_empregos,
+            "empregosCriadosLc1074": 8893,
+            "percentual": resumo.get("coberturaLc1074"),
+            "lacunas": "2013 suprido pela Normas USP; PDFs de 2015–2021 fora do ar; anexos em imagem não lidos.",
+        },
         "resumo": resumo,
         "campi": campi_lista,
         "unidades": linhas,

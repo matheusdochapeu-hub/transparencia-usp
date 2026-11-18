@@ -118,4 +118,4 @@ Empregos que saíram da Reitoria/banco central para a unidade (recebidos) ou vol
 
 ## Ressalvas
 
-O efetivo do Anuário reúne servidores de todos os regimes (cargos e empregos). vagasMin é um limite inferior: só aparecem vagas quando os empregos alocados superam o efetivo total da unidade. Para o número exato seria necessário o quadro de lotação do DRH.
+Estimativas, não um quadro oficial de vagas. O efetivo do Anuário reúne servidores de todos os regimes (cargos e empregos); o D.O.E. informa quanto foi alocado a cada unidade, mas não quantos desses empregos estão ocupados. vagasMin é um limite inferior: só aparece vaga quando os empregos alocados superam o efetivo total da unidade. O número exato exige o quadro de lotação do DRH — pedido em aberto.

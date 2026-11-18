@@ -9,6 +9,7 @@ import * as Categorias from './views/categorias.js';
 import * as Categoria from './views/categoria.js';
 import * as Mudancas from './views/mudancas.js';
 import * as Vacancia from './views/vacancia.js';
+import * as VagasTA from './views/vagas-ta.js';
 import * as Tecnicos from './views/tecnicos.js';
 import * as Vencimentos from './views/vencimentos.js';
 import * as Movimento from './views/movimento.js';
@@ -144,6 +145,7 @@ const ROUTES = [
   { key: 'categoria', re: /^\/categoria\/([a-z0-9-]+)$/, label: 'Categoria', mod: Categoria },
   { key: 'mudancas', re: /^\/mudancas$/, label: 'Mudanças', mod: Mudancas },
   { key: 'vacancia', re: /^\/vacancia$/, label: 'Vacância', mod: Vacancia },
+  { key: 'vagas-ta', re: /^\/vagas-ta$/, label: 'Vagas TA', mod: VagasTA },
   { key: 'tecnicos', re: /^\/tecnicos$/, label: 'Servidores', mod: Tecnicos },
   { key: 'vencimentos', re: /^\/vencimentos$/, label: 'Vencimentos', mod: Vencimentos },
   { key: 'movimento', re: /^\/movimento$/, label: 'Movimento', mod: Movimento },
