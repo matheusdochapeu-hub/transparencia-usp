@@ -3,7 +3,7 @@
 import { store } from '../data.js';
 import { barsChart, hBars } from '../charts.js';
 import { pageHead, card, notice } from '../ui.js';
-import { esc, fmtInt, fmtPct, fmtSigned, downloadFile, toCSV, debounce } from '../util.js';
+import { esc, fmtInt, fmtPct, fmtSigned, nf1, downloadFile, toCSV, debounce } from '../util.js';
 
 const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const sum = (o) => (o ? o.bas + o.tec + o.sup + o.out : 0);
@@ -108,12 +108,17 @@ export async function render(el) {
       .map((u) => {
         const total = unitTotal(u, String(last));
         const prev = unitTotal(u, String(years[years.length - 2]));
+        const five = unitTotal(u, String(years[fiveAgo]));
+        const start = unitTotal(u, String(years[0]));
         return {
           ...u,
           total,
+          base1: prev,
+          base5: five,
+          baseAll: start,
           d1: total - prev,
-          d5: total - unitTotal(u, String(years[fiveAgo])),
-          dAll: total - unitTotal(u, String(years[0])),
+          d5: total - five,
+          dAll: total - start,
         };
       })
       .filter((r) => r.total > 0 || r.dAll !== 0);
@@ -128,8 +133,14 @@ export async function render(el) {
     return list;
   }
 
-  const deltaCell = (v) =>
-    v === 0 ? '<span class="dim">0</span>' : v > 0 ? `<span class="delta up">▲ ${fmtSigned(v)}</span>` : `<span class="delta down">▼ ${fmtSigned(v)}</span>`;
+  const deltaCell = (v, base) => {
+    if (!v) return '<span class="dim">0</span>';
+    const pct = base ? (v / base) * 100 : null;
+    const cls = v > 0 ? 'up' : 'down';
+    const arrow = v > 0 ? '▲' : '▼';
+    const pctTxt = pct == null ? '' : ` <span class="dim" style="font-weight:400">(${pct > 0 ? '+' : ''}${nf1.format(pct)}%)</span>`;
+    return `<span class="delta ${cls}">${arrow} ${fmtSigned(v)}${pctTxt}</span>`;
+  };
 
   function drawTable() {
     const list = rows();
@@ -149,9 +160,9 @@ export async function render(el) {
             <td title="${esc(r.name)}"><b>${esc(r.sigla)}</b>${r.name ? ` <span class="hint">${esc(r.name)}</span>` : ''}</td>
             ${scoped ? '' : `<td class="dim">${esc(r.campus)}</td>`}
             <td class="num">${fmtInt(r.total)}</td>
-            <td class="num">${deltaCell(r.d1)}</td>
-            <td class="num">${deltaCell(r.d5)}</td>
-            <td class="num" style="background:rgba(var(--heat-rgb),${(0.03 + (Math.abs(r.dAll) / maxV) * 0.25).toFixed(3)})">${deltaCell(r.dAll)}</td>
+            <td class="num">${deltaCell(r.d1, r.base1)}</td>
+            <td class="num">${deltaCell(r.d5, r.base5)}</td>
+            <td class="num" style="background:rgba(var(--heat-rgb),${(0.03 + (Math.abs(r.dAll) / maxV) * 0.25).toFixed(3)})">${deltaCell(r.dAll, r.baseAll)}</td>
           </tr>`
         )
         .join('')}</tbody>
