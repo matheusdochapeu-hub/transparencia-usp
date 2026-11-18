@@ -45,6 +45,11 @@ export async function render(el, slug) {
     st.sortKey = 'label';
     st.sortDir = 'desc';
   }
+  // tempo de casa: até 05 → 06-10 → 11-20 → … → 51-60
+  if (meta.slug === 'tempo-usp') {
+    st.sortKey = 'label';
+    st.sortDir = 'desc';
+  }
   // formação: progressão educacional (fundamental incompleto → doutorado)
   const FORMACAO_RANK = [
     'sem instru', 'fundamental ii incompleto', 'fundamental i incompleto', 'fundamental incompleto',
@@ -204,7 +209,7 @@ export async function render(el, slug) {
             <option value="current">Maior no fim do período</option>
             <option value="delta">Maior variação absoluta</option>
             <option value="pct">Maior variação %</option>
-            <option value="label"${meta.slug === 'formacao' || meta.slug === 'jornada' ? ' selected' : ''}>${meta.slug === 'formacao' ? 'Progressão educacional' : meta.slug === 'jornada' ? 'Jornada (crescente)' : 'Nome (A–Z)'}</option>
+            <option value="label"${meta.slug === 'formacao' || meta.slug === 'jornada' || meta.slug === 'tempo-usp' ? ' selected' : ''}>${meta.slug === 'formacao' ? 'Progressão educacional' : meta.slug === 'jornada' ? 'Jornada (crescente)' : meta.slug === 'tempo-usp' ? 'Tempo de casa (crescente)' : 'Nome (A–Z)'}</option>
           </select>
           <div class="spacer"></div>
           <span class="hint" id="tableCount"></span>
