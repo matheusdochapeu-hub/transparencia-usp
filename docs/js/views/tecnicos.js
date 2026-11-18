@@ -203,10 +203,15 @@ export async function render(el) {
   }
 
   function rows() {
+    const prevY = years.length > 1 ? String(years[years.length - 2]) : last;
+    const fiveY = String(years[Math.max(0, years.length - 6)]);
     let list = scopedUnits
       .map((u) => {
         const v = unitCareer(u, last);
-        return { ...u, ...v, total: sumObj(v) };
+        const total = sumObj(v);
+        const prev = sumObj(unitCareer(u, prevY));
+        const five = sumObj(unitCareer(u, fiveY));
+        return { ...u, ...v, total, d1: total - prev, d5: total - five };
       })
       .filter((r) => r.total > 0);
     if (st.unit) list = list.filter((r) => r.sigla === st.unit);
@@ -214,10 +219,20 @@ export async function render(el) {
       const q = norm(st.q);
       list = list.filter((r) => norm(r.sigla + ' ' + r.name + ' ' + r.campus).includes(q));
     }
-    list.sort((a, b) => (st.sort === 'sigla' ? a.sigla.localeCompare(b.sigla) : (b[st.sort] || 0) - (a[st.sort] || 0)));
+    const key = st.sort;
+    list.sort((a, b) =>
+      key === 'sigla' ? a.sigla.localeCompare(b.sigla) : (key === 'd1' || key === 'd5' ? Math.abs(b[key]) - Math.abs(a[key]) : (b[key] || 0) - (a[key] || 0))
+    );
     if (st.dir === 'asc') list.reverse();
     return list;
   }
+
+  const deltaCell = (v) =>
+    v === 0
+      ? '<span class="dim">0</span>'
+      : v > 0
+      ? `<span class="delta up">▲ ${fmtSigned(v)}</span>`
+      : `<span class="delta down">▼ ${fmtSigned(v)}</span>`;
 
   function drawTable() {
     const list = rows();
@@ -231,6 +246,8 @@ export async function render(el) {
         <th class="sortable ${st.sort === 'tec' ? 'sorted' : ''}" data-sort="tec">Técnico</th>
         <th class="sortable ${st.sort === 'sup' ? 'sorted' : ''}" data-sort="sup">Superior</th>
         <th class="sortable ${st.sort === 'total' ? 'sorted' : ''}" data-sort="total">Total</th>
+        <th class="sortable ${st.sort === 'd1' ? 'sorted' : ''}" data-sort="d1">Δ 1 ano</th>
+        <th class="sortable ${st.sort === 'd5' ? 'sorted' : ''}" data-sort="d5">Δ 5 anos</th>
         <th>% do total</th>
       </tr></thead>
       <tbody>${list
@@ -242,6 +259,8 @@ export async function render(el) {
             <td class="num">${fmtInt(r.tec)}</td>
             <td class="num">${fmtInt(r.sup)}</td>
             <td class="num" style="font-weight:650;background:rgba(var(--heat-rgb),${(0.04 + (r.total / maxV) * 0.3).toFixed(3)})">${fmtInt(r.total)}</td>
+            <td class="num">${deltaCell(r.d1)}</td>
+            <td class="num">${deltaCell(r.d5)}</td>
             <td class="num">${fmtPct((r.total / total) * 100)}</td>
           </tr>`
         )
@@ -252,6 +271,8 @@ export async function render(el) {
         <td class="num">${fmtInt(list.reduce((a, r) => a + r.tec, 0))}</td>
         <td class="num">${fmtInt(list.reduce((a, r) => a + r.sup, 0))}</td>
         <td class="num">${fmtInt(total)}</td>
+        <td class="num">${deltaCell(list.reduce((a, r) => a + r.d1, 0))}</td>
+        <td class="num">${deltaCell(list.reduce((a, r) => a + r.d5, 0))}</td>
         <td>100%</td>
       </tr></tfoot>
     </table>`;
