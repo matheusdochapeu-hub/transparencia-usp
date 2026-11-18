@@ -6,6 +6,8 @@ Gerado em 2026-11-18 · estoque do D.O.E. em 2026 · efetivo de 2026 (Transparê
 
 empregos = estoque de empregos públicos alocados por unidade segundo o D.O.E. (distribuições e redistribuições); efetivo = técnico-administrativos ativos no Portal da Transparência; vagasMin = max(0, empregos - efetivo); apos12m = novas aposentadorias de técnico-administrativos em 12 meses; vagasPot = vagasMin + apos12m.
 
+Cobertura do acervo: os empregos identificados equivalem a 67.6% dos 8.893 criados pela LC 1.074/2008. Lacunas conhecidas: página de 2013 ausente na biblioteca do DRH (suprida pela Normas USP), alguns PDFs de 2015–2021 fora do ar e anexos em imagem não lidos.
+
 ## Resumo
 
 - **6.016** empregos públicos alocados (D.O.E.)

@@ -110,6 +110,11 @@ def write_markdown(payload: dict, destino: str) -> None:
     L.append("")
     L.append(payload["metodo"])
     L.append("")
+    L.append(f"Cobertura do acervo: os empregos identificados equivalem a "
+             f"{r.get('coberturaLc1074', '—')}% dos 8.893 criados pela LC 1.074/2008. "
+             "Lacunas conhecidas: página de 2013 ausente na biblioteca do DRH (suprida pela "
+             "Normas USP), alguns PDFs de 2015–2021 fora do ar e anexos em imagem não lidos.")
+    L.append("")
     L.append("## Resumo")
     L.append("")
     L.append(f"- **{r['empregosAlocados']:,}** empregos públicos alocados (D.O.E.)".replace(",", "."))
@@ -286,6 +291,7 @@ def main() -> None:
         "unidadesSemEfetivo": sum(1 for l in linhas if l["semEfetivo"]),
         "recebidosBanco": sum(l["recebidosBanco"] for l in linhas),
         "devolvidosBanco": sum(l["devolvidosBanco"] for l in linhas),
+        "coberturaLc1074": round(total_empregos / 8893 * 100, 1) if total_empregos else None,
     }
 
     payload = {
