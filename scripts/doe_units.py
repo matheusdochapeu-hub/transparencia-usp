@@ -59,14 +59,14 @@ UNITS = [
     ("IAU", "Instituto de Arquitetura e Urbanismo", "São Carlos", ["Instituto de Arquitetura e Urbanismo"]),
     ("IB", "Instituto de Biociências", "São Paulo", ["Instituto de Biociências"]),
     ("ICB", "Instituto de Ciências Biomédicas", "São Paulo", ["Instituto de Ciências Biomédicas"]),
-    ("ICMC", "Instituto de Ciências Matemáticas e de Computação", "São Carlos", ["Instituto de Ciências Matemáticas e de Computação", "Instituto de Ciências Matemáticas de São Carlos"]),
+    ("ICMC", "Instituto de Ciências Matemáticas e de Computação", "São Carlos", ["Instituto de Ciências Matemáticas e de Computação", "Instituto de Ciências Matemáticas e da Computação", "Instituto de Ciências Matemáticas de São Carlos"]),
     ("IEA", "Instituto de Estudos Avançados", "São Paulo", ["Instituto de Estudos Avançados"]),
     ("IEB", "Instituto de Estudos Brasileiros", "São Paulo", ["Instituto de Estudos Brasileiros"]),
     ("IEE", "Instituto de Energia e Ambiente", "São Paulo", ["Instituto de Energia e Ambiente", "Instituto de Eletrotécnica e Energia"]),
     ("IF", "Instituto de Física", "São Paulo", ["Instituto de Física"]),
     ("IFSC", "Instituto de Física de São Carlos", "São Carlos", ["Instituto de Física de São Carlos"]),
     ("IGc", "Instituto de Geociências", "São Paulo", ["Instituto de Geociências"]),
-    ("IME", "Instituto de Matemática e Estatística", "São Paulo", ["Instituto de Matemática e Estatística"]),
+    ("IME", "Instituto de Matemática e Estatística", "São Paulo", ["Instituto de Matemática e Estatística", "Instituto de Matemática, Estatística e Ciência da Computação", "Instituto de Matemática, Estatística e Computação Científica"]),
     ("IMT", "Instituto de Medicina Tropical", "São Paulo", ["Instituto de Medicina Tropical"]),
     ("IO", "Instituto Oceanográfico", "São Paulo", ["Instituto Oceanográfico"]),
     ("IP", "Instituto de Psicologia", "São Paulo", ["Instituto de Psicologia"]),
@@ -77,20 +77,21 @@ UNITS = [
     ("MAE", "Museu de Arqueologia e Etnologia", "São Paulo", ["Museu de Arqueologia e Etnologia"]),
     ("MP", "Museu Paulista", "São Paulo", ["Museu Paulista"]),
     ("MZ", "Museu de Zoologia", "São Paulo", ["Museu de Zoologia"]),
-    ("PUSP-B", "Prefeitura do Campus de Bauru", "Bauru", ["Prefeitura do Campus de Bauru"]),
-    ("PUSP-C", "Prefeitura do Campus da Capital", "Órgãos centrais (RUSP)", ["Prefeitura do Campus da Capital"]),
-    ("PUSP-CB", "Prefeitura do Campus Capital - Butantã", "São Paulo", ["Prefeitura do Campus Capital - Butantã", "Prefeitura do Campus Capital-Butantã"]),
-    ("PUSP-CL", "Prefeitura do Campus Capital - Leste", "São Paulo", ["Prefeitura do Campus Capital - Leste", "Prefeitura do Campus Capital-Leste"]),
-    ("PUSP-FC", "Prefeitura do Campus Fernando Costa", "Pirassununga", ["Prefeitura do Campus Fernando Costa", "Prefeitura do Campus “Fernando Costa”"]),
-    ("PUSP-L", "Prefeitura do Campus de Lorena", "Lorena", ["Prefeitura do Campus de Lorena"]),
-    ("PUSP-LQ", "Prefeitura do Campus Luiz de Queiroz", "Piracicaba", ["Prefeitura do Campus Luiz de Queiroz", "Prefeitura do Campus “Luiz de Queiroz”"]),
+    ("PUSP-B", "Prefeitura do Campus de Bauru", "Bauru", ["Prefeitura do Campus de Bauru", "Prefeitura do Campus USP de Bauru", "Coordenadoria do Campus de Bauru"]),
+    ("PUSP-C", "Prefeitura do Campus da Capital", "Órgãos centrais (RUSP)", ["Prefeitura do Campus da Capital", "Prefeitura do Campus USP da Capital", "Coordenadoria do Campus da Capital"]),
+    ("PUSP-CB", "Prefeitura do Campus Capital - Butantã", "São Paulo", ["Prefeitura do Campus Capital - Butantã", "Prefeitura do Campus Capital-Butantã", "Prefeitura do Campus USP Capital - Butantã"]),
+    ("PUSP-CL", "Prefeitura do Campus Capital - Leste", "São Paulo", ["Prefeitura do Campus Capital - Leste", "Prefeitura do Campus Capital-Leste", "Prefeitura do Campus USP Capital - Leste"]),
+    ("PUSP-FC", "Prefeitura do Campus Fernando Costa", "Pirassununga", ["Prefeitura do Campus Fernando Costa", "Prefeitura do Campus “Fernando Costa”", "Prefeitura do Campus USP de Pirassununga", "Coordenadoria do Campus de Pirassununga"]),
+    ("PUSP-L", "Prefeitura do Campus de Lorena", "Lorena", ["Prefeitura do Campus de Lorena", "Prefeitura do Campus USP de Lorena", "Coordenadoria do Campus de Lorena"]),
+    ("PUSP-LQ", "Prefeitura do Campus Luiz de Queiroz", "Piracicaba", ["Prefeitura do Campus Luiz de Queiroz", "Prefeitura do Campus “Luiz de Queiroz”", "Prefeitura do Campus USP “Luiz de Queiroz”", "Coordenadoria do Campus “Luiz de Queiroz”", "Coordenadoria do Campus de Piracicaba"]),
     ("PUSP-QSD", "Prefeitura do Campus Quadrilátero Saúde/Direito", "São Paulo", ["Prefeitura do Campus Quadrilátero Saúde/Direito", "Prefeitura do Campus do Quadrilátero Saúde/Direito"]),
-    ("PUSP-RP", "Prefeitura do Campus de Ribeirão Preto", "Ribeirão Preto", ["Prefeitura do Campus de Ribeirão Preto"]),
-    ("PUSP-SC", "Prefeitura do Campus de São Carlos", "São Carlos", ["Prefeitura do Campus de São Carlos"]),
+    ("PUSP-RP", "Prefeitura do Campus de Ribeirão Preto", "Ribeirão Preto", ["Prefeitura do Campus de Ribeirão Preto", "Prefeitura do Campus USP de Ribeirão Preto", "Coordenadoria do Campus de Ribeirão Preto"]),
+    ("PUSP-SC", "Prefeitura do Campus de São Carlos", "São Carlos", ["Prefeitura do Campus de São Carlos", "Prefeitura do Campus USP de São Carlos", "Coordenadoria do Campus de São Carlos"]),
     ("RUSP", "Reitoria da Universidade de São Paulo", "Órgãos centrais (RUSP)", [
         "Reitoria da Universidade de São Paulo", "Reitoria",
         # órgãos da administração central (o Anuário agrega tudo em RUSP)
         "Pró-Reitoria de Inclusão e Pertencimento",
+        "Pró-Reitoria de Pesquisa",
         "Pró-Reitoria de Pesquisa e Inovação",
         "Pró-Reitoria de Graduação",
         "Pró-Reitoria de Pós-Graduação",
@@ -101,6 +102,17 @@ UNITS = [
         "Coordenadoria de Administração Geral",
         "Banco de Reservas de Vagas",
         "Gabinete do Reitor",
+        "Gabinete da Vice-Reitoria",
+        "Gabinete do Vice-Reitor",
+        "Vice-Reitoria Executiva de Administração",
+        "Vice-Reitoria Executiva de Administração/Departamento de Recursos Humanos",
+        "Procuradoria Geral",
+        "Consultoria Jurídica",
+        "Agência USP de Inovação",
+        "Gabinete da Reitora",
+        "Comissão de Cooperação Internacional",
+        "Superintendência de Saúde",
+        "Superintendência de Prevenção e Proteção Universitária",
         "Secretaria Geral",
         "Superintendência Jurídica",
         "Agência USP de Cooperação Acadêmica Nacional e Internacional",
@@ -109,7 +121,7 @@ UNITS = [
     ("SCS", "Superintendência de Comunicação Social", "São Paulo", ["Superintendência de Comunicação Social", "Coordenadoria de Comunicação Social"]),
     ("SEF", "Superintendência do Espaço Físico", "São Paulo", ["Superintendência do Espaço Físico", "Coordenadoria do Espaço Físico"]),
     ("SIBI", "Sistema Integrado de Bibliotecas", "Órgãos centrais (RUSP)", ["Sistema Integrado de Bibliotecas"]),
-    ("STI", "Superintendência de Tecnologia da Informação", "São Paulo", ["Superintendência de Tecnologia da Informação", "Centro de Computação Eletrônica"]),
+    ("STI", "Superintendência de Tecnologia da Informação", "São Paulo", ["Superintendência de Tecnologia da Informação", "Centro de Computação Eletrônica", "Coordenadoria de Tecnologia da Informação"]),
     ("SVOC", "Serviço de Verificação de Óbitos da Capital", "São Paulo", ["Serviço de Verificação de Óbitos da Capital"]),
     ("SVOI", "Serviço de Verificação de Óbitos do Interior", "Não identificado", ["Serviço de Verificação de Óbitos do Interior"]),
 ]
@@ -163,5 +175,8 @@ def match_unit(text: str):
     alias, key, name, campus = best
     leftover = [t for t in span.replace(alias, " ").split() if t not in _STOP]
     if not leftover or len(alias) / max(len(span), 1) >= 0.55:
+        return key, name, campus
+    # alias é o começo do trecho (ex.: "Coordenadoria de Administração Geral/Departamento ...")
+    if span.startswith(alias) and (len(span) == len(alias) or span[len(alias)] in " /-"):
         return key, name, campus
     return None, "", None

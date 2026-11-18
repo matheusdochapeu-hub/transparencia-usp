@@ -96,6 +96,79 @@ def scope_unit(sigla: str):
     }
 
 
+def write_markdown(payload: dict, destino: str) -> None:
+    r = payload["resumo"]
+    linhas = payload["unidades"]
+    campi = payload["campi"]
+    L = []
+    L.append("# Vagas técnico-administrativas por unidade — D.O.E. × Transparência × Anuário")
+    L.append("")
+    L.append(f"Gerado em {payload['generatedAt'][:10]} · estoque do D.O.E. em {payload['anoReferencia']} · "
+             f"efetivo de {payload['anoReferencia']} (Transparência/Anuário).")
+    L.append("")
+    L.append("## Método")
+    L.append("")
+    L.append(payload["metodo"])
+    L.append("")
+    L.append("## Resumo")
+    L.append("")
+    L.append(f"- **{r['empregosAlocados']:,}** empregos públicos alocados (D.O.E.)".replace(",", "."))
+    L.append(f"- **{r['efetivoTecnicoAdministrativo']:,}** técnico-administrativos ativos".replace(",", "."))
+    L.append(f"- **{r['vagasMin']:,}** vagas mínimas (empregos acima do efetivo)".replace(",", "."))
+    L.append(f"- **{r['apos12m']:,}** aposentadorias de TA nos últimos 12 meses".replace(",", "."))
+    L.append(f"- **{r['vagasPot']:,}** vagas potenciais (mínimas + aposentadorias)".replace(",", "."))
+    L.append(f"- {r['unidadesComEmpregos']} de {r['unidades']} unidades com empregos identificados")
+    L.append("")
+    L.append("## Unidades com mais vagas potenciais")
+    L.append("")
+    L.append("| Unidade | Campus | Cidade | Empregos | Efetivo | Aposent. | Apos. 12m | Vagas mín. | Vagas pot. |")
+    L.append("| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+    for l in linhas[:30]:
+        apos12 = "—" if l["apos12m"] is None else l["apos12m"]
+        vmin = "—" if l["vagasMin"] is None else l["vagasMin"]
+        vpot = "—" if l["vagasPot"] is None else l["vagasPot"]
+        marca = " *(sem série de efetivo)*" if l["semEfetivo"] else ""
+        L.append(f"| {l['sigla']} — {l['nome']}{marca} | {l['campus']} | {l['cidade']} | {l['empregos']} | "
+                 f"{l['efetivo']} | {l['aposentados']} | {apos12} | {vmin} | {vpot} |")
+    L.append("")
+    L.append("## Por campus / cidade")
+    L.append("")
+    L.append("| Campus | Cidade | Unidades | Empregos | Efetivo | Aposent. | Vagas mín. | Vagas pot. |")
+    L.append("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+    for c in campi:
+        L.append(f"| {c['campus']} | {c['cidade']} | {c['unidades']} | {c['empregos']} | "
+                 f"{c['efetivo']} | {c['aposentados']} | {c['vagasMin']} | {c['vagasPot']} |")
+    L.append("")
+    ganhos = [l for l in linhas if l["movGanhos"]]
+    ganhos.sort(key=lambda l: (-l["movGanhos"], l["nome"]))
+    if ganhos:
+        L.append("## Unidades que receberam empregos por redistribuição (últimos 3 anos)")
+        L.append("")
+        L.append("| Unidade | Cidade | Ganhos | Perdas | Último movimento |")
+        L.append("| --- | --- | ---: | ---: | --- |")
+        for l in ganhos[:20]:
+            L.append(f"| {l['sigla']} — {l['nome']} | {l['cidade']} | {l['movGanhos']} | {l['movPerdas']} | {l['movUltimo'] or '—'} |")
+        L.append("")
+    L.append("")
+    banco = [l for l in linhas if l["recebidosBanco"] or l["devolvidosBanco"]]
+    if banco:
+        L.append("## Fluxo do Banco de Reservas de Vagas da Reitoria (últimos 3 anos)")
+        L.append("")
+        L.append("Empregos que saíram do banco central para a unidade (recebidos) ou voltaram da unidade para o banco (devolvidos).")
+        L.append("")
+        L.append("| Unidade | Cidade | Recebidos | Devolvidos |")
+        L.append("| --- | --- | ---: | ---: |")
+        for l in sorted(banco, key=lambda x: (-x["recebidosBanco"], -x["devolvidosBanco"]))[:25]:
+            L.append(f"| {l['sigla']} — {l['nome']} | {l['cidade']} | {l['recebidosBanco']} | {l['devolvidosBanco']} |")
+        L.append("")
+    L.append("## Ressalvas")
+    L.append("")
+    L.append(payload["aviso"])
+    L.append("")
+    with open(destino, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(L))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--ano", type=int, default=0, help="ano de referência do estoque do D.O.E.")
@@ -113,13 +186,11 @@ def main() -> None:
     serie = ledger.get("series", {}).get(str(ano), {})
     por_ano = ledger.get("porAno", {})
 
-    # movimentos recentes (ganhos/perdas) a partir das linhas do D.O.E.
+    # movimentos recentes (ganhos/perdas) e fluxo do Banco de Reservas de Vagas
     rows = (read_json(os.path.join(DOE, "rows.json"), {}) or {}).get("linhas", [])
-    mov = {}
+    mov, banco = {}, {}
     for r in rows:
-        if r["tipo"] == "distribuicao":
-            continue
-        if r["tipo"] == "destinacao":
+        if r["tipo"] not in ("redistribuicao", "transferencia"):
             continue
         ano_mov = int(r.get("ano") or 0)
         if ano_mov < ano - 3:
@@ -132,6 +203,10 @@ def main() -> None:
             m["ganhos" if lado == "paraKey" else "perdas"] += 1
             if r.get("data") and r["data"] > m["ultimo"]:
                 m["ultimo"] = r["data"]
+        if "banco de reservas" in (r.get("de") or "").lower() and r.get("paraKey"):
+            banco.setdefault(r["paraKey"], {"recebidos": 0, "devolvidos": 0})["recebidos"] += 1
+        if "banco de reservas" in (r.get("para") or "").lower() and r.get("deKey"):
+            banco.setdefault(r["deKey"], {"recebidos": 0, "devolvidos": 0})["devolvidos"] += 1
 
     linhas = []
     for sigla, dados in (tec.get("data") or {}).items():
@@ -145,11 +220,14 @@ def main() -> None:
         sc = scope_unit(sigla) or {}
         apos = int(sc.get("aposentados") or 0)
         apos12 = sc.get("apos12m")
-        vagas_min = max(0, empregos - efetivo)
-        vagas_pot = vagas_min + (apos12 or 0)
+        # efetivo zero = unidade sem série no recorte (ex.: SAS, IMT); não é vaga
+        sem_efetivo = efetivo == 0
+        vagas_min = None if sem_efetivo else max(0, empregos - efetivo)
+        vagas_pot = None if vagas_min is None else vagas_min + (apos12 or 0)
         meta = unidades_idx.get(sigla, {})
         campus = meta.get("campus") or next((u.get("campus") for u in (tec.get("units") or []) if u["sigla"] == sigla), "")
         m = mov.get(sigla, {})
+        b = banco.get(sigla, {})
         linhas.append({
             "sigla": sigla,
             "nome": meta.get("name") or next((u.get("name") for u in (tec.get("units") or []) if u["sigla"] == sigla), sigla),
@@ -158,6 +236,7 @@ def main() -> None:
             "empregos": empregos,
             "efetivo": efetivo,
             "efetivoAno": int(ult),
+            "semEfetivo": sem_efetivo,
             "aposentados": apos,
             "apos12m": apos12,
             "vagasMin": vagas_min,
@@ -166,8 +245,12 @@ def main() -> None:
             "movGanhos": m.get("ganhos", 0),
             "movPerdas": m.get("perdas", 0),
             "movUltimo": m.get("ultimo", ""),
+            "recebidosBanco": b.get("recebidos", 0),
+            "devolvidosBanco": b.get("devolvidos", 0),
         })
-    linhas.sort(key=lambda l: (-l["vagasPot"], -l["vagasMin"], -l["aposentados"], l["nome"]))
+    linhas.sort(key=lambda l: (-(l["vagasPot"] if l["vagasPot"] is not None else -1),
+                               -(l["vagasMin"] if l["vagasMin"] is not None else -1),
+                               -l["aposentados"], l["nome"]))
 
     campi = {}
     for l in linhas:
@@ -175,11 +258,16 @@ def main() -> None:
             "campus": l["campus"], "cidade": l["cidade"],
             "unidades": 0, "empregos": 0, "efetivo": 0, "aposentados": 0,
             "apos12m": 0, "vagasMin": 0, "vagasPot": 0, "movGanhos": 0, "movPerdas": 0,
+            "recebidosBanco": 0, "devolvidosBanco": 0, "semEfetivo": 0,
         })
         c["unidades"] += 1
-        for k in ("empregos", "efetivo", "aposentados", "vagasMin", "vagasPot", "movGanhos", "movPerdas"):
+        for k in ("empregos", "efetivo", "aposentados", "movGanhos", "movPerdas",
+                  "recebidosBanco", "devolvidosBanco"):
             c[k] += l[k]
         c["apos12m"] += l["apos12m"] or 0
+        c["vagasMin"] += l["vagasMin"] or 0
+        c["vagasPot"] += l["vagasPot"] or 0
+        c["semEfetivo"] += 1 if l["semEfetivo"] else 0
     campi_lista = sorted(campi.values(), key=lambda c: -c["vagasPot"])
 
     total_empregos = sum(l["empregos"] for l in linhas)
@@ -189,10 +277,13 @@ def main() -> None:
         "efetivoTecnicoAdministrativo": total_efetivo,
         "aposentados": sum(l["aposentados"] for l in linhas),
         "apos12m": sum(l["apos12m"] or 0 for l in linhas),
-        "vagasMin": sum(l["vagasMin"] for l in linhas),
-        "vagasPot": sum(l["vagasPot"] for l in linhas),
+        "vagasMin": sum(l["vagasMin"] or 0 for l in linhas),
+        "vagasPot": sum(l["vagasPot"] or 0 for l in linhas),
         "unidades": len(linhas),
         "unidadesComEmpregos": sum(1 for l in linhas if l["empregos"]),
+        "unidadesSemEfetivo": sum(1 for l in linhas if l["semEfetivo"]),
+        "recebidosBanco": sum(l["recebidosBanco"] for l in linhas),
+        "devolvidosBanco": sum(l["devolvidosBanco"] for l in linhas),
     }
 
     payload = {
@@ -217,6 +308,8 @@ def main() -> None:
     destino = os.path.join(OUT, "vagas-tecnicos.json")
     with open(destino, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, ensure_ascii=False, indent=1)
+    md = os.path.join(ROOT, "RELATORIO-VAGAS-TECNICOS.md")
+    write_markdown(payload, md)
 
     print(f"ano de referência: {ano}")
     print(f"empregos alocados: {total_empregos} | efetivo TA: {total_efetivo} | "
@@ -228,6 +321,7 @@ def main() -> None:
               f"apos12m={l['apos12m'] if l['apos12m'] is not None else '?':>2} "
               f"vagasMin={l['vagasMin']:>3} pot={l['vagasPot']:>3}")
     print(f"\ngravado em {destino}")
+    print(f"relatório em {md}")
 
 
 if __name__ == "__main__":

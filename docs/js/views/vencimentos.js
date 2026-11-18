@@ -217,13 +217,11 @@ export async function render(el) {
       `${classe} · letra ${letra} — salário de ${base} corrigido apenas pelo ${IDX[st.idx]} ` +
       `(${fmtPct((fIdx - 1) * 100)} no período), comparado com o salário atual.`;
     el.querySelector('#corrGrid').innerHTML = `
-      <div class="kpi" style="--kc:var(--muted)"><span class="k-label">Classe</span><span class="k-value">${esc(classe)}</span></div>
-      <div class="kpi" style="--kc:var(--muted)"><span class="k-label">Letra</span><span class="k-value">${esc(letra)}</span></div>
       <div class="kpi" style="--kc:var(--c3)"><span class="k-label">${esc(base)}</span><span class="k-value" style="font-size:1.05rem">${money(b0)}</span></div>
       <div class="kpi" style="--kc:var(--brand)"><span class="k-label">Atual (${esc(last)})</span><span class="k-value" style="font-size:1.05rem">${money(curV)}</span></div>
       <div class="kpi" style="--kc:var(--c2)"><span class="k-label">Só ${IDX[st.idx]}</span><span class="k-value" style="font-size:1.05rem">${money(corr)}</span></div>
-      <div class="kpi" style="--kc:var(--c4)"><span class="k-label">Variação nominal</span><span class="k-value">${nomPct > 0 ? '+' : ''}${fmtPct(nomPct)}</span></div>
       <div class="kpi" style="--kc:${realPct >= 0 ? 'var(--pos)' : 'var(--neg)'}"><span class="k-label">Real (ganho/perda)</span><span class="k-value" style="color:${realPct >= 0 ? 'var(--pos)' : 'var(--neg)'}">${realPct > 0 ? '+' : ''}${fmtPct(realPct)}</span></div>
+      <div class="kpi" style="--kc:${corr - curV > 0 ? 'var(--neg)' : 'var(--pos)'}"><span class="k-label">Diferença (índice − atual)</span><span class="k-value" style="font-size:1.05rem;color:${corr - curV > 0 ? 'var(--neg)' : 'var(--pos)'}">${money(corr - curV)}</span><div class="k-foot"><span>${corr - curV > 0 ? 'faltou receber' : 'recebeu a mais'}</span></div></div>
     `;
   }
 

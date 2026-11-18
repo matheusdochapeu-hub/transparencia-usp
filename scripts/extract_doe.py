@@ -60,6 +60,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOE = os.path.join(ROOT, "data", "doe")
 CACHE = os.path.join(DOE, "cache")
 DRH = "https://drh.usp.br/biblioteca-drh/legislacao/diario-oficial-do-estado/d-o-e-{year}/"
+LEGINF = "https://leginf.usp.br/portarias-indices-anuais-completos/?ano={year}"
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
 FILTER = re.compile(r"emprego", re.I)  # a página parseada decide o que é emprego público
@@ -204,6 +205,32 @@ def collect(year: int):
     return entries
 
 
+def collect_leginf(year: int):
+    """Índice anual de portarias da Normas USP (fonte alternativa, cobre 2013)."""
+    html = get(LEGINF.format(year=year)).decode("utf-8", "replace")
+    entries = []
+    for art in re.findall(r"<article[^>]*>([\s\S]*?)</article>", html):
+        link = re.search(r'<h1[^>]*>\s*<a href="([^"]+)"[^>]*>([\s\S]*?)</a>', art)
+        if not link:
+            continue
+        data = re.search(r"D\.O\.E\.:\s*(\d{1,2}/\d{1,2}/\d{2,4})", art)
+        resumo = re.search(r'<div class="entry-summary">([\s\S]*?)</div>', art)
+        ementa = strip_tags(resumo.group(1)) if resumo else ""
+        titulo = strip_tags(link.group(2))
+        if not FILTER.search(ementa) and not FILTER.search(titulo):
+            continue
+        entries.append({
+            "year": year,
+            "title": re.sub(r"\s+", " ", titulo)[:160],
+            "desc": ementa[:300],
+            "url": html_mod.unescape(link.group(1)),
+            "kind": "leginf",
+            "date": to_iso(data.group(1)) if data else "",
+            "page": None,
+        })
+    return entries
+
+
 def group_pages(entries):
     """Agrupa entradas por página do D.O.E. (uma renderização por página)."""
     groups = OrderedDict()
@@ -211,7 +238,7 @@ def group_pages(entries):
         if not entry.get("url"):
             continue
         kind = entry["kind"]
-        key = entry["url"] if kind == "spa" else pdf_page_key(entry["url"])
+        key = entry["url"] if kind in ("spa", "leginf") else pdf_page_key(entry["url"])
         group = groups.setdefault(key, {
             "key": key, "kind": kind, "year": entry["year"],
             "urls": [], "entries": [], "titles": [],
@@ -223,7 +250,8 @@ def group_pages(entries):
             group["titles"].append(entry["title"])
     # URLs diretas de PDF primeiro; depois o visualizador antigo
     for group in groups.values():
-        group["urls"].sort(key=lambda u: (0 if u.lower().endswith(".pdf") and "buscado" not in u.lower() else 1))
+        if group["kind"] == "pdf":
+            group["urls"].sort(key=lambda u: (0 if u.lower().endswith(".pdf") and "buscado" not in u.lower() else 1))
     return groups
 
 
@@ -313,11 +341,31 @@ def load_page(group, refresh: bool = False, offline: bool = False):
     try:
         if group["kind"] == "spa":
             text = strip_tags(render_spa(group["urls"][0], refresh=refresh, offline=offline))
+        elif group["kind"] == "leginf":
+            titulo = group["titles"][0] if group.get("titles") else ""
+            text = load_leginf(group["urls"][0], titulo, refresh=refresh, offline=offline)
         else:
             text = download_pdf(group["urls"], refresh=refresh, offline=offline)
         return text, None
     except Exception as exc:  # noqa: BLE001
         return "", str(exc)
+
+
+def load_leginf(url: str, titulo: str = "", refresh: bool = False, offline: bool = False) -> str:
+    key = sha("leginf:" + url)
+    path = cache_path("txt", key, ".txt")
+    if os.path.exists(path) and not refresh:
+        return open(path, encoding="utf-8", errors="replace").read()
+    if offline:
+        raise RuntimeError("página não está no cache (offline)")
+    html = get(url).decode("utf-8", "replace")
+    m = re.search(r'<div class="entry-content[^"]*"[^>]*>([\s\S]*?)(?:<footer|</article>)', html)
+    corpo = strip_tags(m.group(1) if m else html)
+    # a página da Normas USP não repete o cabeçalho da portaria: reconstruímos
+    text = (titulo + ". " + corpo).strip() if titulo else corpo
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    open(path, "w", encoding="utf-8").write(text)
+    return text
 
 
 # ------------------------------------------------------------------ parser
@@ -443,7 +491,7 @@ def parse_page(text: str, meta: dict):
         sigla = re.sub(r"\s+", " ", m.group("meta")).strip().upper() or "GR"
         port = {
             "sigla": sigla,
-            "numero": m.group("num"),
+            "numero": re.sub(r"\.", "", m.group("num")),
             "data": data,
             "ano": int(data[:4]) if data else meta.get("year"),
             "ementa": ementa,
@@ -576,8 +624,13 @@ def build_ledger(rows, years):
         stock[r["paraKey"]][classe_key(r["classe"])] += r["qtd"]
         total_dist += r["qtd"]
 
+    # classe de cada emprego numerado (as redistribuições a informam)
+    classe_por_emprego = {
+        r["emprego"]: classe_key(r["classe"]) for r in mov if r.get("emprego") and r.get("classe")
+    }
+
     series = defaultdict(dict)
-    negative, orphan = [], 0
+    negative, orphan, sem_classe = [], 0, 0
     por_ano = defaultdict(lambda: {"distribuicao": 0, "redistribuicao": 0})
 
     def snapshot(year):
@@ -596,14 +649,18 @@ def build_ledger(rows, years):
 
     for r in mov:
         ck = classe_key(r["classe"])
-        if r.get("deKey"):
-            stock[r["deKey"]][ck] -= 1
-            if stock[r["deKey"]][ck] < 0:
-                negative.append(f"{r['data']} {r['portaria']} {r['emprego']} ({r['de']})")
-        else:
+        if ck == "out" and r.get("emprego"):
+            ck = classe_por_emprego.get(r["emprego"], "out")
+        if ck == "out":
+            sem_classe += 1
+            continue
+        if not r.get("deKey") or not r.get("paraKey"):
             orphan += 1
-        if r.get("paraKey"):
-            stock[r["paraKey"]][ck] += 1
+            continue
+        stock[r["deKey"]][ck] -= 1
+        if stock[r["deKey"]][ck] < 0:
+            negative.append(f"{r['data']} {r['portaria']} {r['emprego']} ({r['de']})")
+        stock[r["paraKey"]][ck] += 1
         por_ano[r["ano"]]["redistribuicao"] += 1
 
     for y in years:
@@ -629,6 +686,7 @@ def build_ledger(rows, years):
         "negativos": negative[:40],
         "negativosTotal": len(negative),
         "movimentosSemOrigem": orphan,
+        "movimentosSemClasse": sem_classe,
     }
 
 
@@ -682,6 +740,8 @@ def main() -> None:
     ap.add_argument("--list-only", action="store_true")
     ap.add_argument("--offline", action="store_true", help="usa apenas o cache")
     ap.add_argument("--refresh", action="store_true", help="ignora o cache")
+    ap.add_argument("--leginf", action="store_true", help="inclui o índice anual da Normas USP")
+    ap.add_argument("--leginf-only", action="store_true", help="só a fonte Normas USP")
     args = ap.parse_args()
 
     os.makedirs(DOE, exist_ok=True)
@@ -689,10 +749,20 @@ def main() -> None:
     total_entries = total_with_link = 0
 
     for year in args.years:
-        try:
-            entries = collect(year)
-        except Exception as exc:  # noqa: BLE001
-            print(f"{year}: ERRO ao ler a página do DRH: {exc}")
+        entries = []
+        if not args.leginf_only:
+            try:
+                entries = collect(year)
+            except Exception as exc:  # noqa: BLE001
+                print(f"{year}: ERRO ao ler a página do DRH: {exc}")
+        if args.leginf or args.leginf_only:
+            try:
+                got = collect_leginf(year)
+                print(f"{year}: Normas USP -> {len(got)} portarias com 'emprego'")
+                entries.extend(got)
+            except Exception as exc:  # noqa: BLE001
+                print(f"{year}: ERRO no índice da Normas USP: {exc}")
+        if not entries:
             continue
         groups = group_pages(entries)
         with_link = sum(1 for e in entries if e.get("url"))
