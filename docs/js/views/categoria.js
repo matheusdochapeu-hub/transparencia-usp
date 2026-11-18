@@ -61,6 +61,20 @@ export async function render(el, slug) {
     st.sortKey = 'label';
     st.sortDir = 'desc';
   }
+  // jornada: ordem crescente de horas (RTP 12h, RTC 24h, RDIDP 40h)
+  const jornadaRank = (lab) => {
+    const s = norm(lab);
+    if (s.includes('rdidp')) return 40;
+    if (s.includes('rtc')) return 24;
+    if (s.includes('rtp')) return 12;
+    if (s.includes('nao informado')) return 999;
+    const m = s.match(/(\d+)/);
+    return m ? Number(m[1]) : 900;
+  };
+  if (meta.slug === 'jornada') {
+    st.sortKey = 'label';
+    st.sortDir = 'desc';
+  }
 
   const tot = () => cat.colTotals[st.metric];
 
@@ -117,6 +131,14 @@ export async function render(el, slug) {
               .map((b) => esc(store.refs.find((r) => r.id === b.ref)?.label || b.ref))
               .join(', ')}</b>. Comparações que atravessam essa data podem refletir reclassificação de nomenclatura, não variação real do efetivo.`,
             'warn'
+          )}</div>`
+        : ''
+    }
+    ${
+      meta.slug === 'jornada'
+        ? `<div style="margin-bottom:16px">${notice(
+            '<b>Regimes docentes:</b> <b>RDIDP</b> — Regime de Dedicação Integral à Docência e à Pesquisa (40 horas semanais, com exclusividade); <b>RTC</b> — Regime de Turno Completo (24 horas); <b>RTP</b> — Regime de Tempo Parcial (12 horas). As demais linhas são jornadas em horas semanais.',
+            'info'
           )}</div>`
         : ''
     }
@@ -182,7 +204,7 @@ export async function render(el, slug) {
             <option value="current">Maior no fim do período</option>
             <option value="delta">Maior variação absoluta</option>
             <option value="pct">Maior variação %</option>
-            <option value="label"${meta.slug === 'formacao' ? ' selected' : ''}>${meta.slug === 'formacao' ? 'Progressão educacional' : 'Nome (A–Z)'}</option>
+            <option value="label"${meta.slug === 'formacao' || meta.slug === 'jornada' ? ' selected' : ''}>${meta.slug === 'formacao' ? 'Progressão educacional' : meta.slug === 'jornada' ? 'Jornada (crescente)' : 'Nome (A–Z)'}</option>
           </select>
           <div class="spacer"></div>
           <span class="hint" id="tableCount"></span>
@@ -334,10 +356,14 @@ export async function render(el, slug) {
       current: (a, b) => cur(b) - cur(a),
       delta: (a, b) => Math.abs(delta(b)) - Math.abs(delta(a)),
       pct: (a, b) => Math.abs(pct(b) ?? 0) - Math.abs(pct(a) ?? 0),
-      label: (a, b) =>
-        meta.slug === 'formacao'
-          ? formacaoRank(cat.labels[a]) - formacaoRank(cat.labels[b])
-          : naturalCompare(cat.labels[a], cat.labels[b]),
+      label: (a, b) => {
+        if (meta.slug === 'formacao') return formacaoRank(cat.labels[a]) - formacaoRank(cat.labels[b]);
+        if (meta.slug === 'jornada') {
+          const d = jornadaRank(cat.labels[a]) - jornadaRank(cat.labels[b]);
+          return d !== 0 ? d : naturalCompare(cat.labels[a], cat.labels[b]);
+        }
+        return naturalCompare(cat.labels[a], cat.labels[b]);
+      },
     }[st.sortKey];
     lis.sort(cmp);
     if (st.sortDir === 'asc') lis.reverse();
