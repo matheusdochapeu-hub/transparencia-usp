@@ -358,6 +358,55 @@ export function scatterChart(container, cfg) {
   });
 }
 
+/** Barras verticais com suporte a valores negativos. */
+export function barsChart(container, cfg) {
+  const { labels = [], values = [], height = 220, fmt = fmtInt, colorPos = 'var(--pos)', colorNeg = 'var(--neg)' } = cfg;
+  responsive(container, (width) => {
+    const m = { t: 12, r: 12, b: 26, l: 52 };
+    const w = Math.max(280, width);
+    const ph = Math.max(60, height - m.t - m.b);
+    const pw = Math.max(20, w - m.l - m.r);
+    const n = values.length;
+    if (!n) {
+      container.innerHTML = '<div class="empty">Sem dados.</div>';
+      return;
+    }
+    const scale = niceScale(Math.min(0, ...values), Math.max(0, ...values), 4);
+    const Y = (v) => m.t + ph - ((v - scale.min) / (scale.max - scale.min || 1)) * ph;
+    const zero = Y(0);
+    const step = pw / n;
+    const bw = Math.min(40, step * 0.62);
+
+    const parts = [`<svg viewBox="0 0 ${w} ${height}" width="${w}" height="${height}" role="img">`];
+    for (const t of scale.ticks) {
+      parts.push(`<line class="grid-line" x1="${m.l}" y1="${Y(t).toFixed(1)}" x2="${w - m.r}" y2="${Y(t).toFixed(1)}"/>`);
+      parts.push(`<text class="axis-label" x="${m.l - 8}" y="${(Y(t) + 3.5).toFixed(1)}" text-anchor="end">${fmtAxis(t)}</text>`);
+    }
+    const skip = Math.ceil(n / Math.max(3, Math.floor(pw / 64)));
+    values.forEach((v, i) => {
+      const x = m.l + step * i + (step - bw) / 2;
+      const y = Math.min(Y(v), zero);
+      const h = Math.max(1, Math.abs(Y(v) - zero));
+      const color = v >= 0 ? colorPos : colorNeg;
+      parts.push(`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${color}" fill-opacity=".85" data-i="${i}"><title>${esc(labels[i])}: ${fmt(v)}</title></rect>`);
+      if (i % skip === 0 || i === n - 1) {
+        parts.push(`<text class="axis-label" x="${(x + bw / 2).toFixed(1)}" y="${height - 8}" text-anchor="middle">${esc(labels[i])}</text>`);
+      }
+    });
+    parts.push(`<line class="grid-line zero" x1="${m.l}" y1="${zero.toFixed(1)}" x2="${w - m.r}" y2="${zero.toFixed(1)}"/>`);
+    parts.push('</svg>');
+    container.innerHTML = parts.join('');
+
+    container.querySelectorAll('rect[data-i]').forEach((rect) => {
+      rect.addEventListener('mousemove', (ev) => {
+        const i = Number(rect.dataset.i);
+        showTip(`<div class="tt-title">${esc(labels[i])}</div><div class="tt-row"><span class="l">Saldo</span><span class="v">${fmt(values[i])}</span></div>`, ev.clientX, ev.clientY);
+      });
+      rect.addEventListener('mouseleave', hideTip);
+    });
+  });
+}
+
 /** Sparkline como string SVG (para células de tabela e KPIs). */
 export function sparklineSVG(values, color = 'var(--brand)', w = 80, h = 24, fill = true) {
   const vals = values.filter((v) => Number.isFinite(v));

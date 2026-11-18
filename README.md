@@ -31,6 +31,7 @@ ranking de mudanças e análise de correlações.
 | **Vacância** | Cargos de docente autorizados vs. providos (**vago/provido**) por unidade e campus, 2014–2025 |
 | **Servidores** | Quadro efetivo da carreira técnico-administrativa por carreira (**Básico, Técnico, Superior**), **sexo** (2014–2025) e **raça/cor** (2020–2025), por unidade/campus |
 | **Vencimentos** | Tabela salarial do DRH (grau/faixa × letra, classes B/T/S) com evolução **nominal e real** contra **IPCA, IGP-M e INPC** (2011–2026) |
+| **Movimento** | Saldo líquido anual do quadro técnico-administrativo por campus/unidade — quem ganhou e quem perdeu servidores, e em que ano |
 | **Correlações** | Matriz de correlação entre indicadores de categorias diferentes, com dispersão, reta de regressão e p-valor |
 | **Dados** | Tabela completa, dicionário de dados e exportações CSV/JSON |
 
@@ -42,6 +43,35 @@ Função, Função Estrutura, Jornada, Nacionalidade, Raça/Cor, Sexo e Tempo US
 O seletor no topo filtra **todo o painel** por campi (histórico completo, 2015–2026) ou por
 unidade (últimos 24 meses): panorama, categorias, comparador de períodos e ranking de mudanças
 passam a refletir apenas aquele recorte. Deep link: `?scope=campus-10` ou `?scope=unit-EACH`.
+
+## Importar a vacância de servidores (extrato do DRH)
+
+A USP **não publica** cargos em vacância da carreira técnico-administrativa. Quando o DRH
+enviar o extrato (LAI, e-mail ou relatório), o painel já está pronto para exibi-lo:
+
+```bash
+python scripts/import_vacancia.py --input extrato_drh.csv \
+  --source "DRH - resposta de 2026-12-01"
+python scripts/build.py
+```
+
+Formato esperado (CSV com `;` ou XLSX), uma linha por combinação:
+
+```
+competencia;unidade;campus;carreira;classe;letra;situacao;quantidade
+2026-10;EACH;São Paulo;Superior;S1;A;provido;12
+2026-10;EACH;São Paulo;Superior;S1;A;vago;3
+```
+
+- `competencia`: `AAAA-MM`
+- `carreira`: `Basico` | `Tecnico` | `Superior` (aceita acentos e maiúsculas)
+- `situacao`: `provido` | `vago` (aceita “não provido”)
+- `campus`, `classe` e `letra` são opcionais (o campus é preenchido pelo mapa unidade→campus)
+
+Exemplo fictício pronto para teste em `samples/vacancia-servidores-exemplo.csv`.
+O importador valida as linhas, agrega por competência/unidade/carreira e grava
+`data/vacancia-servidores.json`; o build publica em `docs/data/` e a aba **Vacância**
+passa a mostrar a seção “Vacância de servidores”.
 
 ## Fonte e cobertura
 

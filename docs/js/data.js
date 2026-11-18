@@ -312,6 +312,12 @@ export const store = {
     this._venc = await fetchJSON(`${BASE}vencimentos.json`).catch(() => null);
     return this._venc;
   },
+
+  async vacanciaServidores() {
+    if (this._vacS !== undefined) return this._vacS;
+    this._vacS = await fetchJSON(`${BASE}vacancia-servidores.json`).catch(() => null);
+    return this._vacS;
+  },
 };
 
 /* ------------------------------------------------------------------ helpers */

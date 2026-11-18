@@ -517,6 +517,23 @@ def build_vencimentos() -> dict | None:
     return payload
 
 
+def build_vacancia_servidores() -> dict | None:
+    """Publica o extrato de vacância de servidores importado do DRH (se existir)."""
+    raw = read_json(os.path.join(ROOT, "data", "vacancia-servidores.json"))
+    dest = os.path.join(OUT, "vacancia-servidores.json")
+    if not raw or not raw.get("refs"):
+        if os.path.exists(dest):
+            os.remove(dest)
+        print("  vacância de servidores: sem extrato importado (aguardando DRH)")
+        return None
+    write_if_changed(os.path.join(OUT, "vacancia-servidores.json"), raw)
+    last = raw["refs"][-1]
+    t = (raw.get("totals") or {}).get(last, {})
+    print(f"  vacância de servidores: {len(raw['refs'])} competências, {len(raw.get('units') or [])} unidades | "
+          f"{last}: {t.get('provido', 0)} providos, {t.get('vago', 0)} vagos")
+    return raw
+
+
 def main():
     refs_meta = read_json(os.path.join(RAW, "_refs.json"))
     if not refs_meta:
@@ -872,6 +889,7 @@ def main():
 
     # ---- vacância de docentes (Anuário) -------------------------------------
     vacancia = build_vacancia()
+    vacancia_serv = build_vacancia_servidores()
     tecnicos = build_tecnicos()
     vencimentos = build_vencimentos()
     build_scopes()

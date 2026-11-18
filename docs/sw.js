@@ -1,6 +1,6 @@
 ﻿/* Service worker: app shell offline + dados com atualizaÃ§Ã£o em segundo plano. */
 
-const VERSION = 'v11';
+const VERSION = 'v12';
 const SHELL = `usp-shell-${VERSION}`;
 const DATA = `usp-data-${VERSION}`;
 
@@ -24,6 +24,7 @@ const SHELL_ASSETS = [
   'js/views/vacancia.js',
   'js/views/tecnicos.js',
   'js/views/vencimentos.js',
+  'js/views/movimento.js',
   'js/views/correlacoes.js',
   'js/views/dados.js',
   'js/views/sobre.js',

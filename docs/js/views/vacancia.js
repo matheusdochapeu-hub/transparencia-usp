@@ -186,4 +186,61 @@ export async function render(el) {
 
   drawCampus();
   drawTable();
+
+  /* ------------------------------------------------ vacância de servidores */
+  const serv = await store.vacanciaServidores();
+  const extra = document.createElement('div');
+  extra.className = 'section';
+
+  if (!serv) {
+    extra.innerHTML = `<div class="card">
+      <div class="card-head"><div><h3>Vacância de servidores (técnico-administrativos)</h3><p>Aguardando extrato do DRH.</p></div></div>
+      ${notice(
+        'A USP <b>não publica</b> cargos em vacância desta carreira. Este painel já está preparado para exibi-los: basta importar um arquivo com uma linha por combinação — <code>competencia; unidade; campus; carreira; classe; letra; situacao; quantidade</code> — e rodar <code>python scripts/import_vacancia.py --input arquivo.csv</code>. Enquanto isso, veja a aba <a href="#/tecnicos">Servidores</a> (quadro efetivo) e <a href="#/movimento">Movimento</a> (saldo anual).',
+        'warn'
+      )}
+    </div>`;
+  } else {
+    const refs = serv.refs;
+    const last = refs[refs.length - 1];
+    const first = refs[0];
+    const T = (r) => serv.totals[r] || { provido: 0, vago: 0 };
+    const ocup = (t) => (t.provido + t.vago ? (t.provido / (t.provido + t.vago)) * 100 : 0);
+    const units = serv.units || [];
+
+    const rowsS = units
+      .map((u) => {
+        const d = (serv.data[last] || {})[u.sigla] || {};
+        let prov = 0, vago = 0;
+        for (const c of Object.values(d)) { prov += c.provido || 0; vago += c.vago || 0; }
+        return { ...u, prov, vago, total: prov + vago };
+      })
+      .filter((r) => r.total > 0)
+      .sort((a, b) => b.vago - a.vago);
+
+    const campus = {};
+    for (const r of rowsS) campus[r.campus || '—'] = (campus[r.campus || '—'] || 0) + r.vago;
+
+    extra.innerHTML = `<div class="card">
+      <div class="card-head"><div><h3>Vacância de servidores (técnico-administrativos)</h3><p>Extrato importado · ${esc(serv.source || 'DRH')} · ${esc(last)}</p></div><div class="spacer"></div><span class="badge">dados importados</span></div>
+      <div class="grid cols-4" style="margin-bottom:14px">
+        <div class="kpi" style="--kc:var(--c2)"><span class="k-label">Providos</span><span class="k-value">${fmtInt(T(last).provido)}</span></div>
+        <div class="kpi" style="--kc:var(--c3)"><span class="k-label">Vagos</span><span class="k-value">${fmtInt(T(last).vago)}</span></div>
+        <div class="kpi" style="--kc:var(--c4)"><span class="k-label">Ocupação</span><span class="k-value">${fmtPct(ocup(T(last)))}</span></div>
+        <div class="kpi" style="--kc:var(--brand)"><span class="k-label">Variação da vacância</span><span class="k-value">${fmtSigned(T(last).vago - T(first).vago)}</span><div class="k-foot"><span>${esc(first)} → ${esc(last)}</span></div></div>
+      </div>
+      <div class="split">
+        <div><h4 style="font-size:.85rem;margin-bottom:8px">Vagos por campus</h4><div id="svCampus"></div></div>
+        <div class="table-wrap" style="max-height:360px">
+          <table class="data"><thead><tr><th>Unidade</th><th>Campus</th><th>Providos</th><th>Vagos</th><th>Ocupação</th></tr></thead>
+          <tbody>${rowsS.map((r) => `<tr><td>${esc(r.sigla)}</td><td class="dim">${esc(r.campus || '—')}</td><td class="num">${fmtInt(r.prov)}</td><td class="num" style="font-weight:650">${fmtInt(r.vago)}</td><td class="num">${fmtPct(r.total ? (r.prov / r.total) * 100 : 0)}</td></tr>`).join('')}</tbody></table>
+        </div>
+      </div>
+    </div>`;
+    el.appendChild(extra);
+    hBars(extra.querySelector('#svCampus'), {
+      items: Object.entries(campus).map(([c, v]) => ({ label: c, value: v, color: 'var(--c3)' })).sort((a, b) => b.value - a.value),
+      fmt: fmtInt,
+    });
+  }
 }
