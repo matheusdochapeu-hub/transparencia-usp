@@ -468,7 +468,14 @@ export async function render(el, slug) {
         return { li, a, b, d: b - a, pct: a ? ((b - a) / a) * 100 : null };
       })
       .filter((r) => r.a !== 0 || r.b !== 0)
-      .sort((x, y) => Math.abs(y.d) - Math.abs(x.d));
+      .sort((x, y) => {
+        if (meta.slug === 'tempo-usp' || meta.slug === 'faixa-etaria') {
+          return naturalCompare(cat.labels[x.li], cat.labels[y.li]);
+        }
+        if (meta.slug === 'formacao') return formacaoRank(cat.labels[x.li]) - formacaoRank(cat.labels[y.li]);
+        if (meta.slug === 'jornada') return jornadaRank(cat.labels[x.li]) - jornadaRank(cat.labels[y.li]);
+        return Math.abs(y.d) - Math.abs(x.d);
+      });
 
     const maxV = Math.max(...rows.map((r) => Math.max(r.a, r.b)), 1);
     const body = rows
