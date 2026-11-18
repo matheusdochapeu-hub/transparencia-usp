@@ -191,6 +191,7 @@ export async function render(el) {
   const serv = await store.vacanciaServidores();
   const extra = document.createElement('div');
   extra.className = 'section';
+  let campusData = null;
 
   if (!serv) {
     extra.innerHTML = `<div class="card">
@@ -237,10 +238,12 @@ export async function render(el) {
         </div>
       </div>
     </div>`;
-    el.appendChild(extra);
-    hBars(extra.querySelector('#svCampus'), {
-      items: Object.entries(campus).map(([c, v]) => ({ label: c, value: v, color: 'var(--c3)' })).sort((a, b) => b.value - a.value),
-      fmt: fmtInt,
-    });
+    campusData = Object.entries(campus)
+      .map(([c, v]) => ({ label: c, value: v, color: 'var(--c3)' }))
+      .sort((a, b) => b.value - a.value);
+  }
+  el.appendChild(extra);
+  if (campusData) {
+    hBars(extra.querySelector('#svCampus'), { items: campusData, fmt: fmtInt });
   }
 }
