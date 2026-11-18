@@ -64,7 +64,7 @@ export async function render(el) {
               .map((grupo) => {
                 const prefix = grupo[0];
                 const opts = Object.keys(venc.classes).filter((k) => k[0] === prefix);
-                return `<optgroup label="${grupo}">${opts.map((k) => `<option value="${k}">${k} (grau ${venc.classes[k]})</option>`).join('')}</optgroup>`;
+                return `<optgroup label="${grupo}">${opts.map((k) => `<option value="${k}">${k}</option>`).join('')}</optgroup>`;
               })
               .join('')}
           </select>
@@ -100,6 +100,13 @@ export async function render(el) {
     <div class="section card">
       <div class="card-head"><div><h3>Tabela vigente · ${esc(last)}</h3><p>Grau/faixa × letra, com as classes que ocupam cada grau. Fonte: DRH/USP.</p></div></div>
       <div class="table-wrap" id="grid" style="max-height:none"></div>
+    </div>
+
+    <div class="section card">
+      <div class="card-head">
+        <div><h3>Se o índice tivesse sido aplicado</h3><p id="corrSub"></p></div>
+      </div>
+      <div class="table-wrap" id="corrTable" style="max-height:560px"></div>
     </div>
 
     <div class="section">${notice(
@@ -195,6 +202,46 @@ export async function render(el) {
             <td><b>${r[0]}</b></td>
             ${r.slice(1).map((v) => `<td class="num" ${r[0] === grau ? 'style="font-weight:650;background:rgba(var(--heat-rgb),.12)"' : ''}>${money(v)}</td>`).join('')}
             <td class="dim">${esc(classesNoGrau(r[0]))}</td>
+          </tr>`
+        )
+        .join('')}</tbody>
+    </table>`;
+
+    // ---- salário se o índice tivesse sido aplicado ----------------------
+    const fIdx = factor(currentIdx(), base, last);
+    const combos = [];
+    for (const classe of Object.keys(venc.classes)) {
+      for (const letra of LETTERS) {
+        const b0 = valueAt(eds[0], classe, letra);
+        const cur = valueAt(eds[eds.length - 1], classe, letra);
+        const corr = b0 * fIdx;
+        combos.push({
+          classe, letra, b0, cur, corr,
+          nom: (cur / b0 - 1) * 100,
+          real: (cur / corr - 1) * 100,
+        });
+      }
+    }
+    const abaixo = combos.filter((c) => c.real < 0).length;
+    const media = combos.reduce((a, c) => a + c.real, 0) / combos.length;
+    el.querySelector('#corrSub').innerHTML =
+      `Salário de ${esc(base)} corrigido apenas pelo <b>${IDX[st.idx]}</b> (${fmtPct((fIdx - 1) * 100)} no período) ` +
+      `comparado com o salário atual. <b>${abaixo} de ${combos.length}</b> combinações classe/letra perderam poder de compra; ` +
+      `perda média de <b>${fmtPct(Math.abs(media))}</b>.`;
+    el.querySelector('#corrTable').innerHTML = `<table class="data">
+      <thead><tr>
+        <th>Classe</th><th>Letra</th><th>${esc(base)}</th><th>Atual (${esc(last)})</th><th>Se só o ${IDX[st.idx]}</th><th>Δ nominal</th><th>Δ real (ganho/perda)</th>
+      </tr></thead>
+      <tbody>${combos
+        .map(
+          (c) => `<tr>
+            <td><b>${esc(c.classe)}</b></td>
+            <td>${esc(c.letra)}</td>
+            <td class="num">${money(c.b0)}</td>
+            <td class="num">${money(c.cur)}</td>
+            <td class="num">${money(c.corr)}</td>
+            <td class="num">${c.nom > 0 ? '+' : ''}${fmtPct(c.nom)}</td>
+            <td class="num" style="color:${c.real >= 0 ? 'var(--pos)' : 'var(--neg)'};font-weight:600">${c.real > 0 ? '+' : ''}${fmtPct(c.real)}</td>
           </tr>`
         )
         .join('')}</tbody>
