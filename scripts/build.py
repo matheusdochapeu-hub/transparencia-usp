@@ -405,9 +405,9 @@ def build_scopes() -> list[dict]:
                     t = tot[0] if tot else [0, 0, 0, 0, 0]
                     agg = {
                         "Docente": [t[1], 0, 0, 0],
-                        "Técnico Administrativo": [0, t[2], 0, 0],
+                        "Servidores": [0, t[2], 0, 0],
                         "Docente Aposentado": [0, 0, t[3], 0],
-                        "Técnico Administrativo Aposentado": [0, 0, 0, t[4]],
+                        "Servidores aposentados": [0, 0, 0, t[4]],
                     }
                 else:
                     agg = defaultdict(lambda: [0, 0, 0, 0])
@@ -426,7 +426,7 @@ def build_scopes() -> list[dict]:
                     totals_by_label[label] += sum(vals)
             labels = sorted(union, key=lambda l: (-totals_by_label[l], l))
             if slug == "categoria":
-                fixed = ["Docente", "Técnico Administrativo", "Docente Aposentado", "Técnico Administrativo Aposentado"]
+                fixed = ["Docente", "Servidores", "Docente Aposentado", "Servidores aposentados"]
                 labels = [l for l in fixed if l in union] + [l for l in labels if l not in fixed]
             lidx = {l: i for i, l in enumerate(labels)}
             rows = []
@@ -482,6 +482,41 @@ def build_scopes() -> list[dict]:
     return scopes
 
 
+CLASSES = {
+    "B1": 1, "B2": 2, "B3": 3, "B4": 4, "B5": 5,
+    "T1": 3, "T2": 4, "T3": 5, "T4": 6, "T5": 7,
+    "S1": 6, "S2": 7, "S3": 8, "S4": 9, "S5": 10,
+}
+
+
+def build_vencimentos() -> dict | None:
+    """Tabelas de vencimentos (DRH) + séries de inflação (BCB)."""
+    vdir = os.path.join(ROOT, "data", "vencimentos")
+    if not os.path.isdir(vdir):
+        return None
+    files = sorted(f for f in os.listdir(vdir) if re.fullmatch(r"\d{4}-\d{2}\.json", f))
+    if not files:
+        return None
+    editions = []
+    for f in files:
+        snap = read_json(os.path.join(vdir, f))
+        if snap and snap.get("rows"):
+            editions.append({"ref": snap["ref"], "rows": snap["rows"]})
+    inflacao = read_json(os.path.join(ROOT, "data", "inflacao.json"), {}) or {}
+    payload = {
+        "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "source": "DRH/USP — Tabelas salariais dos funcionários",
+        "sourceUrl": "https://drh.usp.br/trabalhe-na-usp/carreiras-usp/carreira-funcionarios/tabelas-salariais/tabelas-salariais-funcionarios/",
+        "inflacaoSource": "Banco Central do Brasil — SGS (IPCA 433, IGP-M 189, INPC 188)",
+        "editions": editions,
+        "classes": CLASSES,
+        "inflacao": inflacao.get("series", {}),
+    }
+    write_if_changed(os.path.join(OUT, "vencimentos.json"), payload)
+    print(f"  vencimentos: {len(editions)} edições ({editions[0]['ref']}–{editions[-1]['ref']})")
+    return payload
+
+
 def main():
     refs_meta = read_json(os.path.join(RAW, "_refs.json"))
     if not refs_meta:
@@ -533,9 +568,9 @@ def main():
                 t = totals[mi]
                 agg = {
                     "Docente": [t[0], 0, 0, 0],
-                    "Técnico Administrativo": [0, t[1], 0, 0],
+                    "Servidores": [0, t[1], 0, 0],
                     "Docente Aposentado": [0, 0, t[2], 0],
-                    "Técnico Administrativo Aposentado": [0, 0, 0, t[3]],
+                    "Servidores aposentados": [0, 0, 0, t[3]],
                 }
             else:
                 agg = defaultdict(lambda: [0, 0, 0, 0])
@@ -557,7 +592,7 @@ def main():
         labels = sorted(union, key=lambda l: (-totals_by_label[l], l))
         if slug == "categoria":
             # ordem fixa para casar as cores com o restante do painel
-            fixed = ["Docente", "Técnico Administrativo", "Docente Aposentado", "Técnico Administrativo Aposentado"]
+            fixed = ["Docente", "Servidores", "Docente Aposentado", "Servidores aposentados"]
             labels = [l for l in fixed if l in union] + [l for l in labels if l not in fixed]
         index = {l: i for i, l in enumerate(labels)}
 
@@ -660,9 +695,9 @@ def main():
                     tot = rows[0] if rows else {}
                     cleaned[str(code)][slug] = [
                         ["Docente", int(tot.get("doc") or 0), 0, 0, 0],
-                        ["Técnico Administrativo", 0, int(tot.get("tecAdm") or 0), 0, 0],
+                        ["Servidores", 0, int(tot.get("tecAdm") or 0), 0, 0],
                         ["Docente Aposentado", 0, 0, int(tot.get("docApos") or 0), 0],
-                        ["Técnico Administrativo Aposentado", 0, 0, 0, int(tot.get("tecAdmApos") or 0)],
+                        ["Servidores aposentados", 0, 0, 0, int(tot.get("tecAdmApos") or 0)],
                     ]
                     continue
                 agg = defaultdict(lambda: [0, 0, 0, 0])
@@ -838,6 +873,7 @@ def main():
     # ---- vacância de docentes (Anuário) -------------------------------------
     vacancia = build_vacancia()
     tecnicos = build_tecnicos()
+    vencimentos = build_vencimentos()
     build_scopes()
 
     # ---- índice -------------------------------------------------------------

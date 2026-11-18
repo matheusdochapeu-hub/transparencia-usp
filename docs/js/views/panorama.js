@@ -7,9 +7,9 @@ import { pageHead, card, seg, bindSegs, notice } from '../ui.js';
 
 const VINC = [
   { key: 'doc', name: 'Docentes', color: 'var(--c1)' },
-  { key: 'tec', name: 'Técnicos administrativos', color: 'var(--c2)' },
+  { key: 'tec', name: 'Servidores', color: 'var(--c2)' },
   { key: 'docApos', name: 'Docentes aposentados', color: 'var(--c3)' },
-  { key: 'tecApos', name: 'Técnicos aposentados', color: 'var(--c4)' },
+  { key: 'tecApos', name: 'Servidores aposentados', color: 'var(--c4)' },
 ];
 
 export async function render(el) {
@@ -32,7 +32,7 @@ export async function render(el) {
   const kpis = [
     { label: 'Efetivo ativo', value: active, delta: active - active12, pct: active12 ? ((active - active12) / active12) * 100 : null, spark: spark((t) => t[0] + t[1]), color: 'var(--brand)' },
     { label: 'Docentes ativos', value: last[0], delta: last[0] - prev12[0], pct: prev12[0] ? ((last[0] - prev12[0]) / prev12[0]) * 100 : null, spark: spark((t) => t[0]), color: 'var(--c1)' },
-    { label: 'Técnicos ativos', value: last[1], delta: last[1] - prev12[1], pct: prev12[1] ? ((last[1] - prev12[1]) / prev12[1]) * 100 : null, spark: spark((t) => t[1]), color: 'var(--c2)' },
+    { label: 'Servidores ativos', value: last[1], delta: last[1] - prev12[1], pct: prev12[1] ? ((last[1] - prev12[1]) / prev12[1]) * 100 : null, spark: spark((t) => t[1]), color: 'var(--c2)' },
     { label: 'Aposentados', value: apos, delta: apos - apos12, pct: apos12 ? ((apos - apos12) / apos12) * 100 : null, spark: spark((t) => t[2] + t[3]), color: 'var(--c3)' },
   ];
 
@@ -173,7 +173,7 @@ export async function render(el) {
   });
 
   el.querySelector('#dlTotais')?.addEventListener('click', () => {
-    const header = ['competencia', 'docentes', 'tecnicos', 'docentes_aposentados', 'tecnicos_aposentados', 'total'];
+    const header = ['competencia', 'docentes', 'servidores', 'docentes_aposentados', 'servidores_aposentados', 'total'];
     const rows = refs.map((r, i) => [r.label, ...T[i], T[i].reduce((a, b) => a + b, 0)]);
     downloadFile('usp-totais-servidores.csv', toCSV(header, rows));
   });

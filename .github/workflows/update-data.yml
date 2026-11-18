@@ -47,6 +47,12 @@ jobs:
       - name: Cargos em vacância (Anuário Estatístico)
         run: python scripts/extract_vagas.py
 
+      - name: Inflação (Banco Central)
+        run: python scripts/extract_inflacao.py
+
+      - name: Tabelas de vencimentos (DRH)
+        run: python scripts/extract_vencimentos.py
+
       - name: Recortes por campus e unidade
         run: python scripts/extract_scope.py --months 24 --workers 4
 

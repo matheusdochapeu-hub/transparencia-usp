@@ -74,7 +74,7 @@ export async function render(el) {
       <div class="card-head"><div><h3>Totais por competência</h3><p>População completa de servidores registrados em cada mês.</p></div></div>
       <div class="table-wrap" style="max-height:60vh">
         <table class="data">
-          <thead><tr><th>Competência</th><th>Docentes</th><th>Técnicos</th><th>Doc. aposentados</th><th>Téc. aposentados</th><th>Total</th><th>Δ mês</th></tr></thead>
+          <thead><tr><th>Competência</th><th>Docentes</th><th>Servidores</th><th>Doc. aposentados</th><th>Serv. aposentados</th><th>Total</th><th>Δ mês</th></tr></thead>
           <tbody>${body}</tbody>
         </table>
       </div>
@@ -90,7 +90,7 @@ export async function render(el) {
             <tr><td><code>doc</code></td><td>Servidores docentes ativos.</td></tr>
             <tr><td><code>tecAdm</code></td><td>Servidores técnicos e administrativos ativos.</td></tr>
             <tr><td><code>docApos</code></td><td>Docentes aposentados.</td></tr>
-            <tr><td><code>tecAdmApos</code></td><td>Técnicos e administrativos aposentados.</td></tr>
+            <tr><td><code>tecAdmApos</code></td><td>Servidores aposentados.</td></tr>
             <tr><td><code>descricao</code></td><td>Valor da categoria (ex.: "Prof Doutor", "Feminino", "RDIDP").</td></tr>
             <tr><td><code>funcao-estrutura</code></td><td>Categoria especial: conta servidores ativos em funções de estrutura; a coluna <code>doc</code> representa o total de servidores.</td></tr>
           </tbody>
@@ -100,7 +100,7 @@ export async function render(el) {
   `;
 
   el.querySelector('#dlAll').addEventListener('click', () => {
-    const header = ['competencia', 'docentes', 'tecnicos', 'docentes_aposentados', 'tecnicos_aposentados', 'total'];
+    const header = ['competencia', 'docentes', 'servidores', 'docentes_aposentados', 'servidores_aposentados', 'total'];
     const rows = refs.map((r, i) => [r.label, ...T[i], T[i].reduce((a, b) => a + b, 0)]);
     downloadFile('usp-totais-servidores.csv', toCSV(header, rows));
   });

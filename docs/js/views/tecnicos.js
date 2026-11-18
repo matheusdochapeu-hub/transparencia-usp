@@ -2,7 +2,7 @@
 
 import { store } from '../data.js';
 import { lineChart, hBars, donut } from '../charts.js';
-import { pageHead, card, notice } from '../ui.js';
+import { pageHead, card, notice, seg, bindSegs } from '../ui.js';
 import { esc, fmtInt, fmtPct, fmtSigned, downloadFile, toCSV, debounce } from '../util.js';
 
 const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -39,7 +39,7 @@ export async function render(el) {
   const years = tec.years;
   const last = String(years[years.length - 1]);
   const first = String(years[0]);
-  const st = { q: '', unit: '', sort: 'total', dir: 'desc' };
+  const st = { q: '', unit: '', sort: 'total', dir: 'desc', career: 'all' };
 
   /* ---------------------------------------------------------- agregadores */
   const unitCareer = (u, y) => (tec.data[u.sigla] || {})[y] || { bas: 0, tec: 0, sup: 0, out: 0 };
@@ -88,6 +88,20 @@ export async function render(el) {
       lead: 'Quadro <b>efetivo</b> da carreira técnico-administrativa: <b>Básico</b>, <b>Técnico</b> e <b>Superior</b> (analistas), além de <b>sexo</b> e <b>raça/cor</b>. A USP não publica cargos em vacância para esta carreira.',
       actions: `<a class="btn" href="#/vacancia">Vacância (docentes)</a><a class="btn" href="${tec.sourceUrl}" target="_blank" rel="noopener">Fonte: Anuário USP ↗</a>`,
     })}
+
+    <div class="section card" style="margin-bottom:14px">
+      <div class="toolbar">
+        <span class="hint" style="font-weight:650">Ver por carreira:</span>
+        ${seg('career', [
+          { v: 'all', label: 'Todas' },
+          { v: 'bas', label: 'Básico' },
+          { v: 'tec', label: 'Técnico' },
+          { v: 'sup', label: 'Superior (analistas)' },
+        ], 'all')}
+        <div class="spacer"></div>
+        <span class="hint">Filtra o gráfico e a tabela de unidades</span>
+      </div>
+    </div>
 
     <div class="grid cols-4" style="margin-bottom:16px">
       <div class="kpi" style="--kc:var(--brand)"><span class="k-label">Total (${last})</span><span class="k-value">${fmtInt(totalLast)}</span><div class="k-foot"><span>${fmtSigned(totalLast - sumObj(tFirst))} desde ${first}</span></div></div>
@@ -140,15 +154,27 @@ export async function render(el) {
   `;
 
   /* ---------------------------------------------------------- carreira */
-  const series = CARREIRAS.slice(0, 3).map((c) => ({
-    name: c.name,
-    color: c.color,
-    values: years.map((y) => aggCareer(String(y))[c.key]),
-  }));
-  lineChart(el.querySelector('#cChart'), { labels: years.map(String), series, height: 270, fmt: fmtInt });
-  el.querySelector('#cLegend').innerHTML = series
-    .map((s) => `<span class="item"><span class="swatch" style="background:${s.color}"></span>${esc(s.name)} <b>${fmtInt(s.values[s.values.length - 1])}</b></span>`)
-    .join('');
+  function drawCareer() {
+    const series = CARREIRAS.slice(0, 3)
+      .filter((c) => st.career === 'all' || c.key === st.career)
+      .map((c) => ({
+        name: c.name,
+        color: c.color,
+        values: years.map((y) => aggCareer(String(y))[c.key]),
+      }));
+    lineChart(el.querySelector('#cChart'), { labels: years.map(String), series, height: 270, fmt: fmtInt });
+    el.querySelector('#cLegend').innerHTML = series
+      .map((s) => `<span class="item"><span class="swatch" style="background:${s.color}"></span>${esc(s.name)} <b>${fmtInt(s.values[s.values.length - 1])}</b></span>`)
+      .join('');
+  }
+  drawCareer();
+  bindSegs(el, (k, v) => {
+    if (k === 'career') {
+      st.career = v;
+      drawCareer();
+      drawTable();
+    }
+  });
 
   /* ---------------------------------------------------------- sexo */
   const sexBox = el.querySelector('#sexDonut');
@@ -236,16 +262,17 @@ export async function render(el) {
 
   function drawTable() {
     const list = rows();
-    const total = list.reduce((a, r) => a + r.total, 0) || 1;
-    const maxV = Math.max(...list.map((r) => r.total), 1);
+    const cols = st.career === 'all' ? CARREIRAS.slice(0, 3) : CARREIRAS.filter((c) => c.key === st.career);
+    const val = (r) => (st.career === 'all' ? r.total : r[st.career] || 0);
+    const sorted = list.slice().sort((a, b) => val(b) - val(a));
+    const total = list.reduce((a, r) => a + val(r), 0) || 1;
+    const maxV = Math.max(...list.map(val), 1);
     el.querySelector('#tTable').innerHTML = `<table class="data">
       <thead><tr>
         <th class="sortable ${st.sort === 'sigla' ? 'sorted' : ''}" data-sort="sigla">Unidade</th>
         ${scoped ? '' : '<th>Campus</th>'}
-        <th class="sortable ${st.sort === 'bas' ? 'sorted' : ''}" data-sort="bas">Básico</th>
-        <th class="sortable ${st.sort === 'tec' ? 'sorted' : ''}" data-sort="tec">Técnico</th>
-        <th class="sortable ${st.sort === 'sup' ? 'sorted' : ''}" data-sort="sup">Superior</th>
-        <th class="sortable ${st.sort === 'total' ? 'sorted' : ''}" data-sort="total">Total</th>
+        ${cols.map((c) => `<th class="sortable ${st.sort === c.key ? 'sorted' : ''}" data-sort="${c.key}">${esc(c.name)}</th>`).join('')}
+        <th class="sortable ${st.sort === 'total' ? 'sorted' : ''}" data-sort="total">${st.career === 'all' ? 'Total' : esc(cols[0].name)}</th>
         <th class="sortable ${st.sort === 'd1' ? 'sorted' : ''}" data-sort="d1">Δ 1 ano</th>
         <th class="sortable ${st.sort === 'd5' ? 'sorted' : ''}" data-sort="d5">Δ 5 anos</th>
         <th>% do total</th>
@@ -255,21 +282,17 @@ export async function render(el) {
           (r) => `<tr>
             <td title="${esc(r.name)}"><b>${esc(r.sigla)}</b>${r.name ? ` <span class="hint">${esc(r.name)}</span>` : ''}</td>
             ${scoped ? '' : `<td class="dim">${esc(r.campus)}</td>`}
-            <td class="num">${fmtInt(r.bas)}</td>
-            <td class="num">${fmtInt(r.tec)}</td>
-            <td class="num">${fmtInt(r.sup)}</td>
-            <td class="num" style="font-weight:650;background:rgba(var(--heat-rgb),${(0.04 + (r.total / maxV) * 0.3).toFixed(3)})">${fmtInt(r.total)}</td>
+            ${cols.map((c) => `<td class="num">${fmtInt(r[c.key])}</td>`).join('')}
+            <td class="num" style="font-weight:650;background:rgba(var(--heat-rgb),${(0.04 + (val(r) / maxV) * 0.3).toFixed(3)})">${fmtInt(val(r))}</td>
             <td class="num">${deltaCell(r.d1)}</td>
             <td class="num">${deltaCell(r.d5)}</td>
-            <td class="num">${fmtPct((r.total / total) * 100)}</td>
+            <td class="num">${fmtPct((val(r) / total) * 100)}</td>
           </tr>`
         )
         .join('')}</tbody>
       <tfoot><tr>
         <td>${list.length} unidades</td>${scoped ? '' : '<td></td>'}
-        <td class="num">${fmtInt(list.reduce((a, r) => a + r.bas, 0))}</td>
-        <td class="num">${fmtInt(list.reduce((a, r) => a + r.tec, 0))}</td>
-        <td class="num">${fmtInt(list.reduce((a, r) => a + r.sup, 0))}</td>
+        ${cols.map((c) => `<td class="num">${fmtInt(list.reduce((a, r) => a + (r[c.key] || 0), 0))}</td>`).join('')}
         <td class="num">${fmtInt(total)}</td>
         <td class="num">${deltaCell(list.reduce((a, r) => a + r.d1, 0))}</td>
         <td class="num">${deltaCell(list.reduce((a, r) => a + r.d5, 0))}</td>

@@ -306,6 +306,12 @@ export const store = {
     this._tec = await fetchJSON(`${BASE}tecnicos.json`).catch(() => null);
     return this._tec;
   },
+
+  async vencimentos() {
+    if (this._venc !== undefined) return this._venc;
+    this._venc = await fetchJSON(`${BASE}vencimentos.json`).catch(() => null);
+    return this._venc;
+  },
 };
 
 /* ------------------------------------------------------------------ helpers */

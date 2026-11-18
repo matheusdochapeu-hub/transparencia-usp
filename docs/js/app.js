@@ -10,6 +10,7 @@ import * as Categoria from './views/categoria.js';
 import * as Mudancas from './views/mudancas.js';
 import * as Vacancia from './views/vacancia.js';
 import * as Tecnicos from './views/tecnicos.js';
+import * as Vencimentos from './views/vencimentos.js';
 import * as Correlacoes from './views/correlacoes.js';
 import * as Dados from './views/dados.js';
 import * as Sobre from './views/sobre.js';
@@ -114,6 +115,7 @@ const ROUTES = [
   { key: 'mudancas', re: /^\/mudancas$/, label: 'Mudanças', mod: Mudancas },
   { key: 'vacancia', re: /^\/vacancia$/, label: 'Vacância', mod: Vacancia },
   { key: 'tecnicos', re: /^\/tecnicos$/, label: 'Servidores', mod: Tecnicos },
+  { key: 'vencimentos', re: /^\/vencimentos$/, label: 'Vencimentos', mod: Vencimentos },
   { key: 'correlacoes', re: /^\/correlacoes$/, label: 'Correlações', mod: Correlacoes },
   { key: 'dados', re: /^\/dados$/, label: 'Dados', mod: Dados },
   { key: 'sobre', re: /^\/sobre$/, label: 'Sobre', mod: Sobre },
