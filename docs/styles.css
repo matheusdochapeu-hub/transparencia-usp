@@ -382,6 +382,15 @@ table.data tfoot td.cmp-pin { background: var(--panel-2); }
 table.data tfoot td { border-top: 1px solid var(--line-strong); font-weight: 650; background: var(--panel-2); position: sticky; bottom: 0; }
 table.data tfoot td:first-child { background: var(--panel-2); }
 
+.pyramid { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.py-row { display: grid; grid-template-columns: 1fr 128px 1fr; align-items: center; gap: 8px; }
+.py-side { display: flex; align-items: center; gap: 6px; justify-content: flex-end; min-width: 0; }
+.py-side.right { justify-content: flex-start; }
+.py-bar { height: 15px; border-radius: 3px; min-width: 1px; flex: none; }
+.py-val { font-size: .72rem; color: var(--muted); min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+.py-side.right .py-val { text-align: left; }
+.py-label { font-size: .75rem; text-align: center; color: var(--ink); white-space: nowrap; }
+
 .heat { position: relative; }
 .row-label { display: flex; align-items: center; gap: 7px; }
 .row-label .swatch { width: 9px; height: 9px; border-radius: 3px; flex: none; }

@@ -64,6 +64,24 @@ export async function render(el, slug) {
   const topLi = cat.labels.map((_, i) => i).sort((a, b) => raw(b, lastI) - raw(a, lastI))[0];
   const topShare = raw(topLi, lastI) / (curTot || 1);
 
+  const isPyramid = meta.slug === 'faixa-etaria';
+  let pyramidRows = '';
+  if (isPyramid) {
+    const rows = cat.labels
+      .map((lab, li) => ({ lab, doc: cat.m.doc[li][lastI], tec: cat.m.tec[li][lastI] }))
+      .sort((a, b) => naturalCompare(a.lab, b.lab));
+    const max = Math.max(1, ...rows.map((r) => Math.max(r.doc, r.tec)));
+    pyramidRows = rows
+      .map(
+        (r) => `<div class="py-row">
+          <div class="py-side"><span class="py-val">${fmtInt(r.doc)}</span><span class="py-bar" style="width:${((r.doc / max) * 100).toFixed(1)}%;background:var(--c1)"></span></div>
+          <div class="py-label">${esc(r.lab)}</div>
+          <div class="py-side right"><span class="py-bar" style="width:${((r.tec / max) * 100).toFixed(1)}%;background:var(--c2)"></span><span class="py-val">${fmtInt(r.tec)}</span></div>
+        </div>`
+      )
+      .join('');
+  }
+
   el.innerHTML = `
     ${pageHead({
       eyebrow: store.isGlobal ? 'Categoria' : `Recorte · ${esc(store.scopeInfo.name)}`,
@@ -116,6 +134,19 @@ export async function render(el, slug) {
         <div id="focusBar" class="hint" style="margin-top:6px"></div>
       </div>
     </div>
+
+    ${
+      isPyramid
+        ? `<div class="section"><div class="card">
+            <div class="card-head"><div><h3>Pirâmide etária</h3><p>Docentes (esquerda) e servidores (direita) em ${esc(refs[lastI].label)}.</p></div></div>
+            <div class="legend" style="margin-bottom:8px">
+              <span class="item"><span class="swatch" style="background:var(--c1)"></span>Docentes</span>
+              <span class="item"><span class="swatch" style="background:var(--c2)"></span>Servidores</span>
+            </div>
+            <div class="pyramid">${pyramidRows}</div>
+          </div></div>`
+        : ''
+    }
 
     <div class="section">
       <div class="card">
