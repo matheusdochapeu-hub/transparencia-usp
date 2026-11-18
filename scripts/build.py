@@ -413,7 +413,7 @@ def build_scopes() -> list[dict]:
         )
 
     scopes.sort(key=lambda s: (0 if s["type"] == "campus" else 1, s["name"]))
-    write_json(
+    write_if_changed(
         os.path.join(OUT, "scopes.json"),
         {"generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"), "scopes": scopes},
     )

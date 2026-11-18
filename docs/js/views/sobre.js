@@ -24,6 +24,10 @@ export async function render(el) {
       a: `Uma rotina automatizada (GitHub Actions) roda todo dia 1º do mês, verifica se há competência nova, baixa apenas o que falta e regenera este painel. O histórico nunca é descartado: cada mês extraído fica versionado no repositório.`,
     },
     {
+      q: 'Posso ver os dados de uma unidade ou campus específico?',
+      a: `Sim. O seletor no topo (<b>USP (geral) → Campus → Unidades</b>) filtra o painel inteiro: panorama, categorias, comparador de períodos e ranking de mudanças passam a refletir só aquele recorte. Os <b>campi</b> têm histórico completo (2015–2026); as <b>unidades</b> têm os últimos 24 meses. O recorte também fica no link: <code>?scope=campus-10</code> ou <code>?scope=unit-EACH</code>.`,
+    },
+    {
       q: 'Dá para saber quantos cargos estão vagos (em vacância) por campus?',
       a: `Para <b>docentes</b>, sim: o Anuário Estatístico da USP publica, por unidade, quantos cargos de professor estão <b>vagos</b> e <b>providos</b> (Tabela 2.08). A aba <a href="#/vacancia">Vacância</a> traz a série de 2014 a 2025, com totais por campus. Para <b>técnicos administrativos</b> a USP não publica essa informação — ela existe apenas no Banco de Cargos interno. O que existe é o <b>quadro efetivo</b> por carreira (Básico, Técnico e Superior), na aba <a href="#/tecnicos">Técnico-Administrativo</a>. Vale lembrar que <b>cargo vago não é concurso aberto</b>: a decisão de abrir edital é da Reitoria/CAA.`,
     },
