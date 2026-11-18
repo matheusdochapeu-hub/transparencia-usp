@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""
+Cargos em vacância de docentes da USP, por unidade.
+
+Fonte: Anuário Estatístico da USP — Tabela 2.08 "Quadro de Docentes efetivos"
+(https://uspdigital.usp.br/anuario/), disponível em XLS por ano de referência.
+
+A tabela é long-format: Tipo de Unidade | Unidade | Tipo de Cargo | Situação | Total
+  Tipo de Cargo: Cargo Inicial | Cargo Final
+  Situação:      Vago | Provido
+
+O mapa unidade -> campus é descoberto consultando o Portal da Transparência
+(filtro por unidade e campus) e fica versionado em data/vagas/unit-campus.json.
+
+Uso:
+  python scripts/extract_vagas.py            # baixa/atualiza 2014..ano atual
+  python scripts/extract_vagas.py --map      # refaz o mapa unidade -> campus
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import urllib.request
+from datetime import datetime, timezone
+
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(ROOT, "data", "vagas")
+XLS_URL = "https://uspdigital.usp.br/anuario/br/tabelas/XLS/{year}/T2.08.xls"
+CAMPUS_NAMES = {
+    "10": "São Paulo",
+    "20": "Bauru",
+    "30": "Piracicaba",
+    "40": "Pirassununga",
+    "50": "São Carlos",
+    "60": "Ribeirão Preto",
+    "70": "Lorena",
+}
+
+
+def xlrd_module():
+    try:
+        import xlrd  # noqa: PLC0415
+
+        return xlrd
+    except ImportError:
+        sys.path.insert(0, os.path.join(os.environ.get("TEMP", "/tmp"), "pdflib"))
+        import xlrd  # noqa: PLC0415
+
+        return xlrd
+
+
+def write_json(path: str, obj) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(obj, fh, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, path)
+
+
+def read_json(path: str, default=None):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except FileNotFoundError:
+        return default
+
+
+def fetch_year(year: int):
+    xlrd = xlrd_module()
+    req = urllib.request.Request(XLS_URL.format(year=year), headers=UA)
+    data = urllib.request.urlopen(req, timeout=90).read()
+    sh = xlrd.open_workbook(file_contents=data).sheet_by_index(0)
+
+    header_row = None
+    for r in range(min(20, sh.nrows)):
+        if str(sh.cell_value(r, 0)).strip().lower().startswith("tipo de unidade"):
+            header_row = r
+            break
+    if header_row is None:
+        raise RuntimeError(f"cabeçalho não encontrado em {year}")
+
+    rows = []
+    for r in range(header_row + 1, sh.nrows):
+        tipo = str(sh.cell_value(r, 0)).strip()
+        unidade = str(sh.cell_value(r, 1)).strip()
+        cargo = str(sh.cell_value(r, 2)).strip()
+        sit = str(sh.cell_value(r, 3)).strip()
+        total = sh.cell_value(r, 4)
+        if not unidade or sit not in ("Vago", "Provido") or cargo not in ("Cargo Inicial", "Cargo Final"):
+            continue
+        try:
+            total = int(round(float(total)))
+        except (TypeError, ValueError):
+            continue
+        rows.append([tipo, unidade, cargo, sit, total])
+    return {"year": year, "rows": rows, "fetchedAt": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+
+
+def build_campus_map(force: bool = False):
+    """Descobre o campus de cada unidade consultando o portal (cached)."""
+    dest = os.path.join(OUT, "unit-campus.json")
+    cached = read_json(dest)
+    if cached and not force:
+        return cached
+
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    from extract import Session, call_with_retry  # noqa: PLC0415
+
+    sess = Session().warm()
+    refs = call_with_retry(sess, "listarReferencia")
+    dated = sorted(
+        (r for r in refs if r.get("dtainictc")),
+        key=lambda r: (r["dtainictc"][6:], r["dtainictc"][:2]),
+    )
+    server_date = dated[-1]["dtainictc"].replace("\\/", "/")
+
+    units = call_with_retry(sess, "listarUnidade")
+    mapping = {}
+    for u in units:
+        sigla = str(u.get("sglund") or "").strip()
+        if not sigla:
+            continue
+        nome = str(u.get("nomabvund") or "").strip()
+        for code, cname in CAMPUS_NAMES.items():
+            out = call_with_retry(sess, "listarInfoServidor", "SPlistarInfoServidorCategoria", server_date, sigla, code)
+            total = sum(
+                int(r.get("doc") or 0) + int(r.get("tecAdm") or 0) + int(r.get("docApos") or 0) + int(r.get("tecAdmApos") or 0)
+                for r in out
+            )
+            if total > 0:
+                mapping[sigla] = {"campus": cname, "code": code, "name": nome}
+                break
+        print(f"  {sigla:10} -> {mapping.get(sigla, {}).get('campus', '?')}")
+
+    write_json(dest, {"mapping": mapping, "builtAt": datetime.now(timezone.utc).isoformat(timespec="seconds")})
+    return {"mapping": mapping}
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--map", action="store_true", help="refaz o mapa unidade -> campus")
+    args = ap.parse_args()
+
+    os.makedirs(OUT, exist_ok=True)
+    if args.map or not os.path.exists(os.path.join(OUT, "unit-campus.json")):
+        print("Mapeando unidades -> campus pelo portal…")
+        build_campus_map(force=args.map)
+
+    current = datetime.now().year
+    ok = 0
+    for year in range(2014, current + 1):
+        try:
+            payload = fetch_year(year)
+        except Exception as exc:  # noqa: BLE001
+            print(f"{year}: indisponível ({exc})")
+            continue
+        # mantém o registro do ano de referência dentro do arquivo
+        path = os.path.join(OUT, f"T2.08-{year}.json")
+        prev = read_json(path)
+        if prev and prev.get("rows") == payload["rows"]:
+            print(f"{year}: sem mudanças ({len(payload['rows'])} linhas)")
+        else:
+            write_json(path, payload)
+            print(f"{year}: {len(payload['rows'])} linhas")
+        ok += 1
+    print(f"{ok} anos processados em {OUT}")
+
+
+if __name__ == "__main__":
+    main()

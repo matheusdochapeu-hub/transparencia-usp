@@ -33,6 +33,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Dependências
+        run: pip install --quiet xlrd
+
       - name: Extrair do Portal da Transparência
         run: |
           if [ "${{ inputs.full }}" = "true" ]; then
@@ -40,6 +43,9 @@ jobs:
           else
             python scripts/extract.py --refresh-last 2 --with-campus --campus-categories
           fi
+
+      - name: Cargos em vacância (Anuário Estatístico)
+        run: python scripts/extract_vagas.py
 
       - name: Construir dados do painel
         run: python scripts/build.py

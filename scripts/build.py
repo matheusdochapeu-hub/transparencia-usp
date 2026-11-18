@@ -135,6 +135,78 @@ def detect_breaks(payload, min_change=10, min_jaccard=0.8):
     return out
 
 
+def build_vacancia() -> dict | None:
+    """Agrega os cargos em vacância de docentes (Anuário, Tabela 2.08)."""
+    vdir = os.path.join(ROOT, "data", "vagas")
+    if not os.path.isdir(vdir):
+        return None
+    files = sorted(
+        (f for f in os.listdir(vdir) if re.fullmatch(r"T2\.08-\d{4}\.json", f)),
+        key=lambda f: int(f[6:10]),
+    )
+    if not files:
+        return None
+    mapping = (read_json(os.path.join(vdir, "unit-campus.json")) or {}).get("mapping", {})
+
+    years: list[int] = []
+    data: dict[str, dict[str, dict[str, int]]] = {}
+    unit_tipo: dict[str, str] = {}
+    totals: dict[str, dict[str, int]] = {}
+    for name in files:
+        snap = read_json(os.path.join(vdir, name))
+        if not snap:
+            continue
+        year = int(snap["year"])
+        years.append(year)
+        key = str(year)
+        for tipo, unidade, cargo, situacao, total in snap["rows"]:
+            unidade = re.sub(r"\s+", "", unidade)  # "M A E" -> "MAE"
+            bucket = data.setdefault(unidade, {}).setdefault(key, {"iv": 0, "ip": 0, "fv": 0, "fp": 0})
+            if cargo == "Cargo Inicial":
+                bucket["iv" if situacao == "Vago" else "ip"] += total
+            else:
+                bucket["fv" if situacao == "Vago" else "fp"] += total
+            unit_tipo.setdefault(unidade, tipo)
+            tot = totals.setdefault(key, {"iv": 0, "ip": 0, "fv": 0, "fp": 0})
+            tot["iv" if (cargo == "Cargo Inicial" and situacao == "Vago") else
+                "ip" if (cargo == "Cargo Inicial") else
+                "fv" if situacao == "Vago" else "fp"] += total
+
+    campus_agg: dict[str, dict[str, dict[str, int]]] = {}
+    units_meta = []
+    for sigla in sorted(data):
+        info = mapping.get(sigla, {})
+        # RUSP é o banco de cargos dos órgãos centrais, não um campus
+        campus = "Órgãos centrais (RUSP)" if sigla == "RUSP" else (info.get("campus") or "Não identificado")
+        units_meta.append(
+            {"sigla": sigla, "name": info.get("name") or "", "campus": campus, "tipo": unit_tipo.get(sigla, "")}
+        )
+        for ykey, vals in data[sigla].items():
+            agg = campus_agg.setdefault(campus, {}).setdefault(ykey, {"iv": 0, "ip": 0, "fv": 0, "fp": 0})
+            for k, v in vals.items():
+                agg[k] += v
+
+    payload = {
+        "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "source": "Anuário Estatístico da USP — Tabela 2.08 (Quadro de Docentes efetivos)",
+        "sourceUrl": "https://uspdigital.usp.br/anuario/",
+        "note": "Cargos de docente (inicial e final) por unidade. A USP não publica cargos em vacância de técnicos administrativos.",
+        "years": years,
+        "units": units_meta,
+        "data": data,
+        "campus": campus_agg,
+        "totals": totals,
+    }
+    write_json(os.path.join(OUT, "vacancia.json"), payload)
+    last = str(years[-1])
+    t = totals[last]
+    print(
+        f"  vacância: {len(years)} anos ({years[0]}–{years[-1]}), {len(units_meta)} unidades | "
+        f"{last}: {t['iv'] + t['ip'] + t['fv'] + t['fp']} cargos, {t['iv'] + t['fv']} vagos"
+    )
+    return payload
+
+
 def main():
     refs_meta = read_json(os.path.join(RAW, "_refs.json"))
     if not refs_meta:
@@ -488,6 +560,9 @@ def main():
     )
     print(f"  mudanças: {len(change_rows)} registros em {len(windows)} janelas")
 
+    # ---- vacância de docentes (Anuário) -------------------------------------
+    vacancia = build_vacancia()
+
     # ---- índice -------------------------------------------------------------
     index = {
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -501,6 +576,14 @@ def main():
         "campus": {
             "available": campus_out is not None,
             "names": {c["code"]: c["name"] for c in (campus_out or {}).get("campuses", [])},
+        },
+        "vacancia": {
+            "available": vacancia is not None,
+            "file": "data/vacancia.json",
+            "year": vacancia["years"][-1] if vacancia else None,
+            "firstYear": vacancia["years"][0] if vacancia else None,
+            "units": len(vacancia["units"]) if vacancia else 0,
+            "totals": vacancia["totals"][str(vacancia["years"][-1])] if vacancia else None,
         },
         "stats": {
             "nRefs": n_refs,

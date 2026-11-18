@@ -24,6 +24,7 @@ ranking de mudanças e análise de correlações.
 | **Panorama** | KPIs do efetivo, evolução por vínculo, composição, maiores mudanças do mês e distribuição por campus |
 | **Categorias** | 11 recortes, cada um com evolução mensal, tabela comparativa por período e comparador de dois meses |
 | **Mudanças** | Ranking de todos os valores por variação (1 mês, 12 meses, 5 anos, série completa) |
+| **Vacância** | Cargos de docente autorizados vs. providos (**vago/provido**) por unidade e campus, 2014–2025 |
 | **Correlações** | Matriz de correlação entre indicadores de categorias diferentes, com dispersão, reta de regressão e p-valor |
 | **Dados** | Tabela completa, dicionário de dados e exportações CSV/JSON |
 
@@ -32,11 +33,14 @@ Função, Função Estrutura, Jornada, Nacionalidade, Raça/Cor, Sexo e Tempo US
 
 ## Fonte e cobertura
 
-- **Fonte:** Portal da Transparência da USP — “Busca de Servidores”.
+- **Fonte principal:** Portal da Transparência da USP — “Busca de Servidores”.
 - **Cobertura:** Jul/2015 até a competência mais recente (o limite inicial é do próprio portal).
 - **Granularidade:** mensal, contagens agregadas.
 - **Campi:** 7 (São Paulo, Bauru, Piracicaba, Pirassununga, São Carlos, Ribeirão Preto, Lorena).
+- **Vacância:** Anuário Estatístico da USP, Tabela 2.08 (Quadro de Docentes efetivos), 2014–2025.
 - **Privacidade:** nenhum dado individual; apenas totais já publicados pela USP.
+
+> **Sobre “vagas”:** a USP **não publica** cargos em vacância de técnicos administrativos — esse número existe apenas no Banco de Cargos interno. Para docentes, o Anuário publica anualmente `vago`/`provido` por unidade. Cargo vago ≠ concurso aberto: a abertura de edital é decisão da Reitoria/CAA.
 
 ### Validação
 
@@ -60,15 +64,18 @@ Cada competência é salva como um snapshot em `data/raw/AAAA-MM.json`. O histó
 **versionado no repositório** — nada é sobrescrito.
 
 ```
-scripts/extract.py   extração (incremental por padrão, com retry e sessão própria)
-scripts/build.py     normaliza snapshots -> docs/data/*.json + CSV
-scripts/make_icons.py gera os ícones da PWA
+scripts/extract.py        extração mensal do portal (incremental, com retry)
+scripts/extract_vagas.py  vacância de docentes (XLS do Anuário, 2014–2025)
+scripts/build.py          normaliza snapshots -> docs/data/*.json + CSV
+scripts/make_icons.py     gera os ícones da PWA
 ```
 
 ### Rodar localmente
 
 ```bash
+pip install xlrd
 python scripts/extract.py --full          # baixa todo o histórico (~15 min)
+python scripts/extract_vagas.py           # vacância de docentes (Anuário)
 python scripts/build.py                   # gera os dados do painel
 python -m http.server 8000 --directory docs
 # abra http://localhost:8000
@@ -91,6 +98,7 @@ pelo botão *Run workflow*.
 
 ```
 data/raw/            snapshots mensais brutos (fonte da verdade)
+data/vagas/          T2.08 do Anuário + mapa unidade -> campus
 docs/                PWA publicada no GitHub Pages
   data/              dados normalizados + CSV
   js/                aplicação (ES modules, sem dependências)

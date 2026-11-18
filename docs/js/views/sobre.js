@@ -24,6 +24,10 @@ export async function render(el) {
       a: `Uma rotina automatizada (GitHub Actions) roda todo dia 1º do mês, verifica se há competência nova, baixa apenas o que falta e regenera este painel. O histórico nunca é descartado: cada mês extraído fica versionado no repositório.`,
     },
     {
+      q: 'Dá para saber quantos cargos estão vagos (em vacância) por campus?',
+      a: `Para <b>docentes</b>, sim: o Anuário Estatístico da USP publica, por unidade, quantos cargos de professor estão <b>vagos</b> e <b>providos</b> (Tabela 2.08). A aba <a href="#/vacancia">Vacância</a> traz a série de 2014 a 2025, com totais por campus. Para <b>técnicos administrativos</b> a USP não publica essa informação — ela existe apenas no Banco de Cargos interno. Vale lembrar que <b>cargo vago não é concurso aberto</b>: a decisão de abrir edital é da Reitoria/CAA.`,
+    },
+    {
       q: 'Por que alguns totais não batem entre categorias?',
       a: `Categorias diferentes podem ter populações ligeiramente distintas. “Função Estrutura”, por exemplo, conta apenas servidores ativos em funções de chefia/coordenação — por isso o total é menor. Nas demais categorias a soma equivale ao total do mês.`,
     },

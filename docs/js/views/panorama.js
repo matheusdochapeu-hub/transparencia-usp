@@ -115,6 +115,7 @@ export async function render(el) {
       <section class="card">
         <div class="card-head"><div><h3>Efetivo por campus</h3><p>${esc(refs[n - 1].label)} · soma dos campi equivale ao total da USP.</p></div></div>
         <div id="campusBars"><div class="skeleton" style="height:210px"></div></div>
+        <p class="hint" id="vacHint" style="margin-top:12px"></p>
       </section>
     </div>
 
@@ -188,4 +189,14 @@ export async function render(el) {
     .map((c) => ({ label: c.name, value: c.series[c.series.length - 1].reduce((a, b) => a + b, 0), color: 'var(--brand)' }))
     .sort((a, b) => b.value - a.value);
   hBars(box, { items, fmt: fmtInt });
+
+  // vacância de docentes (Anuário) — resumo com link
+  const vac = index.vacancia;
+  const hint = el.querySelector('#vacHint');
+  if (vac?.available && vac.totals && hint) {
+    const t = vac.totals;
+    const vg = t.iv + t.fv;
+    const tot = t.iv + t.ip + t.fv + t.fp;
+    hint.innerHTML = `<b>${fmtInt(vg)}</b> cargos de docente em vacância em ${vac.year} (${fmtPct((vg / (tot || 1)) * 100)} dos cargos) · <a href="#/vacancia">ver por campus →</a>`;
+  }
 }

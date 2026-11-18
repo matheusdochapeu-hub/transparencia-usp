@@ -88,6 +88,12 @@ export const store = {
     this._changes = await fetchJSON(`${BASE}changes.json`).catch(() => null);
     return this._changes;
   },
+
+  async vacancia() {
+    if (this._vac !== undefined) return this._vac;
+    this._vac = await fetchJSON(`${BASE}vacancia.json`).catch(() => null);
+    return this._vac;
+  },
 };
 
 /* ------------------------------------------------------------------ helpers */
