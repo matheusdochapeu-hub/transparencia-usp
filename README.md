@@ -131,7 +131,8 @@ Não há etapa de build para o front-end: é HTML/CSS/JS puro (ES modules), sem 
 > **Em desenvolvimento — ainda não publicado no painel.** A extração do D.O.E. e o
 > cruzamento com efetivo/aposentadorias estão prontos (`scripts/extract_doe.py`,
 > `scripts/analise_vagas.py`, `docs/data/vagas-tecnicos.json`), mas a aba está fora do
-> menu enquanto o UX e os critérios de "vaga" são revistos.
+> menu enquanto o UX e os critérios de "vaga" são revistos. Diagnóstico, pedido ao DRH e
+> roadmap estão em [PLANO-VAGAS-TA.md](PLANO-VAGAS-TA.md).
 
 A USP aloca **empregos públicos** (CLT, criados pela LC 1.074/2008) por portaria no D.O.E.
 O script `scripts/extract_doe.py` baixa esse acervo — portal `doe.sp.gov.br` para 2023+,
