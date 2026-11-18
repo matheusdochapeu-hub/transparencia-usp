@@ -30,6 +30,7 @@ UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "data", "vagas")
 XLS_URL = "https://uspdigital.usp.br/anuario/br/tabelas/XLS/{year}/T2.08.xls"
+XLS_T214 = "https://uspdigital.usp.br/anuario/br/tabelas/XLS/{year}/T2.14.xls"
 CAMPUS_NAMES = {
     "10": "São Paulo",
     "20": "Bauru",
@@ -140,6 +141,48 @@ def build_campus_map(force: bool = False):
     return {"mapping": mapping}
 
 
+def fetch_t214(year: int):
+    """Tabela 2.14 — Servidores técnico-administrativos por unidade e categoria.
+
+    Long-format: Tipo de Unidade | Unidade | Categoria | [sexpes] | Total
+    (edições antigas não têm a coluna de sexo).
+    """
+    xlrd = xlrd_module()
+    req = urllib.request.Request(XLS_T214.format(year=year), headers=UA)
+    data = urllib.request.urlopen(req, timeout=90).read()
+    sh = xlrd.open_workbook(file_contents=data).sheet_by_index(0)
+
+    header_row = None
+    for r in range(min(20, sh.nrows)):
+        if str(sh.cell_value(r, 0)).strip().lower().startswith("tipo de unidade"):
+            header_row = r
+            break
+    if header_row is None:
+        raise RuntimeError(f"cabeçalho 2.14 não encontrado em {year}")
+
+    cols = {}
+    for c in range(sh.ncols):
+        label = str(sh.cell_value(header_row, c)).strip().lower()
+        if label in ("tipo de unidade", "unidade", "categoria", "sexpes", "total"):
+            cols[label] = c
+    if "unidade" not in cols or "categoria" not in cols or "total" not in cols:
+        raise RuntimeError(f"colunas inesperadas em 2.14/{year}")
+
+    rows = []
+    for r in range(header_row + 1, sh.nrows):
+        tipo = str(sh.cell_value(r, cols["tipo de unidade"])).strip() if "tipo de unidade" in cols else ""
+        unidade = str(sh.cell_value(r, cols["unidade"])).strip()
+        cat = str(sh.cell_value(r, cols["categoria"])).strip()
+        try:
+            total = int(round(float(sh.cell_value(r, cols["total"]))))
+        except (TypeError, ValueError):
+            continue
+        if not unidade or not cat:
+            continue
+        rows.append([tipo, unidade, cat, total])
+    return {"year": year, "rows": rows, "fetchedAt": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--map", action="store_true", help="refaz o mapa unidade -> campus")
@@ -157,16 +200,28 @@ def main() -> None:
             payload = fetch_year(year)
         except Exception as exc:  # noqa: BLE001
             print(f"{year}: indisponível ({exc})")
-            continue
-        # mantém o registro do ano de referência dentro do arquivo
-        path = os.path.join(OUT, f"T2.08-{year}.json")
-        prev = read_json(path)
-        if prev and prev.get("rows") == payload["rows"]:
-            print(f"{year}: sem mudanças ({len(payload['rows'])} linhas)")
         else:
-            write_json(path, payload)
-            print(f"{year}: {len(payload['rows'])} linhas")
-        ok += 1
+            path = os.path.join(OUT, f"T2.08-{year}.json")
+            prev = read_json(path)
+            if prev and prev.get("rows") == payload["rows"]:
+                print(f"{year}: sem mudanças ({len(payload['rows'])} linhas)")
+            else:
+                write_json(path, payload)
+                print(f"{year}: {len(payload['rows'])} linhas")
+            ok += 1
+
+        # quadro técnico-administrativo por carreira
+        try:
+            t214 = fetch_t214(year)
+        except Exception as exc:  # noqa: BLE001
+            print(f"{year}: T2.14 indisponível ({exc})")
+        else:
+            path = os.path.join(OUT, f"T2.14-{year}.json")
+            prev = read_json(path)
+            if prev and prev.get("rows") == t214["rows"]:
+                pass
+            else:
+                write_json(path, t214)
     print(f"{ok} anos processados em {OUT}")
 
 

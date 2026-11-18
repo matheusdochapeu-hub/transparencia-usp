@@ -208,6 +208,87 @@ def build_vacancia() -> dict | None:
     return payload
 
 
+CAT_MAP = {"Básico": "bas", "Técnico": "tec", "Superior": "sup", "não enquadrado": "out"}
+# variantes de sigla entre edições e unidades fora do cadastro do portal
+UNIT_ALIAS = {"SIBi": "SIBI", "PUSPQSD": "PUSP-QSD"}
+EXTRA_CAMPUS = {"PUSP-QSD": "São Paulo"}
+
+
+def build_tecnicos() -> dict | None:
+    """Quadro efetivo técnico-administrativo por carreira e unidade (Anuário, T2.14)."""
+    vdir = os.path.join(ROOT, "data", "vagas")
+    if not os.path.isdir(vdir):
+        return None
+    files = sorted(
+        (f for f in os.listdir(vdir) if re.fullmatch(r"T2\.14-\d{4}\.json", f)),
+        key=lambda f: int(f[6:10]),
+    )
+    if not files:
+        return None
+    mapping = (read_json(os.path.join(vdir, "unit-campus.json")) or {}).get("mapping", {})
+
+    years: list[int] = []
+    data: dict[str, dict[str, dict[str, int]]] = {}
+    unit_tipo: dict[str, str] = {}
+    totals: dict[str, dict[str, int]] = {}
+    for name in files:
+        snap = read_json(os.path.join(vdir, name))
+        if not snap:
+            continue
+        year = int(snap["year"])
+        years.append(year)
+        key = str(year)
+        for tipo, unidade, categoria, total in snap["rows"]:
+            unidade = re.sub(r"\s+", "", unidade)
+            unidade = UNIT_ALIAS.get(unidade, unidade)
+            cat = CAT_MAP.get(categoria)
+            if not cat:
+                continue
+            bucket = data.setdefault(unidade, {}).setdefault(key, {"bas": 0, "tec": 0, "sup": 0, "out": 0})
+            bucket[cat] += total
+            unit_tipo.setdefault(unidade, tipo)
+            tot = totals.setdefault(key, {"bas": 0, "tec": 0, "sup": 0, "out": 0})
+            tot[cat] += total
+
+    campus_agg: dict[str, dict[str, dict[str, int]]] = {}
+    units_meta = []
+    for sigla in sorted(data):
+        info = mapping.get(sigla, {})
+        tipo = unit_tipo.get(sigla, "")
+        campus = (
+            "Órgãos centrais (RUSP)"
+            if sigla == "RUSP"
+            else EXTRA_CAMPUS.get(sigla) or info.get("campus") or "Não identificado"
+        )
+        if campus == "Não identificado" and tipo.startswith("E"):
+            campus = "Órgãos centrais (RUSP)"
+        units_meta.append({"sigla": sigla, "name": info.get("name") or "", "campus": campus, "tipo": tipo})
+        for ykey, vals in data[sigla].items():
+            agg = campus_agg.setdefault(campus, {}).setdefault(ykey, {"bas": 0, "tec": 0, "sup": 0, "out": 0})
+            for k, v in vals.items():
+                agg[k] += v
+
+    payload = {
+        "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "source": "Anuário Estatístico da USP — Tabela 2.14 (Servidores Técnicos e Administrativos)",
+        "sourceUrl": "https://uspdigital.usp.br/anuario/",
+        "note": "Quadro EFETIVO (servidores providos). A USP não publica cargos em vacância para esta carreira.",
+        "years": years,
+        "units": units_meta,
+        "data": data,
+        "campus": campus_agg,
+        "totals": totals,
+    }
+    write_if_changed(os.path.join(OUT, "tecnicos.json"), payload)
+    last = str(years[-1])
+    t = totals[last]
+    print(
+        f"  técnicos: {len(years)} anos ({years[0]}–{years[-1]}), {len(units_meta)} unidades | "
+        f"{last}: {sum(t.values())} servidores (Básico {t['bas']}, Técnico {t['tec']}, Superior {t['sup']})"
+    )
+    return payload
+
+
 def main():
     refs_meta = read_json(os.path.join(RAW, "_refs.json"))
     if not refs_meta:
@@ -563,6 +644,7 @@ def main():
 
     # ---- vacância de docentes (Anuário) -------------------------------------
     vacancia = build_vacancia()
+    tecnicos = build_tecnicos()
 
     # ---- índice -------------------------------------------------------------
     index = {
@@ -585,6 +667,14 @@ def main():
             "firstYear": vacancia["years"][0] if vacancia else None,
             "units": len(vacancia["units"]) if vacancia else 0,
             "totals": vacancia["totals"][str(vacancia["years"][-1])] if vacancia else None,
+        },
+        "tecnicos": {
+            "available": tecnicos is not None,
+            "file": "data/tecnicos.json",
+            "year": tecnicos["years"][-1] if tecnicos else None,
+            "firstYear": tecnicos["years"][0] if tecnicos else None,
+            "units": len(tecnicos["units"]) if tecnicos else 0,
+            "totals": tecnicos["totals"][str(tecnicos["years"][-1])] if tecnicos else None,
         },
         "stats": {
             "nRefs": n_refs,

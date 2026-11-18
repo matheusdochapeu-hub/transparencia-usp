@@ -15,6 +15,10 @@ ranking de mudanças e análise de correlações.
 | --- | --- |
 | ![Detalhe de categoria](assets/preview-categoria.png) | ![Matriz de correlação](assets/preview-correlacoes.png) |
 
+| Vacância (docentes) | Técnico-Administrativo |
+| --- | --- |
+| ![Cargos em vacância](assets/preview-vacancia.png) | ![Quadro técnico-administrativo](assets/preview-tecnicos.png) |
+
 ---
 
 ## O que tem no painel
@@ -25,6 +29,7 @@ ranking de mudanças e análise de correlações.
 | **Categorias** | 11 recortes, cada um com evolução mensal, tabela comparativa por período e comparador de dois meses |
 | **Mudanças** | Ranking de todos os valores por variação (1 mês, 12 meses, 5 anos, série completa) |
 | **Vacância** | Cargos de docente autorizados vs. providos (**vago/provido**) por unidade e campus, 2014–2025 |
+| **Técnico-Administrativo** | Quadro efetivo por carreira (**Básico, Técnico, Superior**) e por unidade/campus, 2014–2025 |
 | **Correlações** | Matriz de correlação entre indicadores de categorias diferentes, com dispersão, reta de regressão e p-valor |
 | **Dados** | Tabela completa, dicionário de dados e exportações CSV/JSON |
 
@@ -38,6 +43,7 @@ Função, Função Estrutura, Jornada, Nacionalidade, Raça/Cor, Sexo e Tempo US
 - **Granularidade:** mensal, contagens agregadas.
 - **Campi:** 7 (São Paulo, Bauru, Piracicaba, Pirassununga, São Carlos, Ribeirão Preto, Lorena).
 - **Vacância:** Anuário Estatístico da USP, Tabela 2.08 (Quadro de Docentes efetivos), 2014–2025.
+- **Quadro técnico:** Anuário Estatístico da USP, Tabela 2.14 (Básico/Técnico/Superior), 2014–2025.
 - **Privacidade:** nenhum dado individual; apenas totais já publicados pela USP.
 
 > **Sobre “vagas”:** a USP **não publica** cargos em vacância de técnicos administrativos — esse número existe apenas no Banco de Cargos interno. Para docentes, o Anuário publica anualmente `vago`/`provido` por unidade. Cargo vago ≠ concurso aberto: a abertura de edital é decisão da Reitoria/CAA.

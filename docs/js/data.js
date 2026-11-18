@@ -94,6 +94,12 @@ export const store = {
     this._vac = await fetchJSON(`${BASE}vacancia.json`).catch(() => null);
     return this._vac;
   },
+
+  async tecnicos() {
+    if (this._tec !== undefined) return this._tec;
+    this._tec = await fetchJSON(`${BASE}tecnicos.json`).catch(() => null);
+    return this._tec;
+  },
 };
 
 /* ------------------------------------------------------------------ helpers */
