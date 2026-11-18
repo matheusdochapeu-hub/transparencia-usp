@@ -3,7 +3,7 @@
 import { store } from '../data.js';
 import { lineChart, hBars, donut } from '../charts.js';
 import { pageHead, card, notice, seg, bindSegs } from '../ui.js';
-import { esc, fmtInt, fmtPct, fmtSigned, downloadFile, toCSV, debounce } from '../util.js';
+import { esc, fmtInt, fmtPct, fmtSigned, nf1, downloadFile, toCSV, debounce } from '../util.js';
 
 const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const CARREIRAS = [
@@ -303,10 +303,12 @@ export async function render(el) {
         const v = unitCareer(u, last);
         const total = sumObj(v);
         const cur = pick(v);
+        const base1 = pick(unitCareer(u, prevY));
+        const base5 = pick(unitCareer(u, fiveY));
         return {
-          ...u, ...v, total,
-          d1: cur - pick(unitCareer(u, prevY)),
-          d5: cur - pick(unitCareer(u, fiveY)),
+          ...u, ...v, total, base1, base5,
+          d1: cur - base1,
+          d5: cur - base5,
         };
       })
       .filter((r) => r.total > 0);
@@ -323,12 +325,15 @@ export async function render(el) {
     return list;
   }
 
-  const deltaCell = (v) =>
-    v === 0
+  const deltaCell = (v, base) => {
+    const pct = base ? (v / base) * 100 : null;
+    const pctTxt = pct == null ? '' : ` <span class="dim" style="font-weight:400">(${pct > 0 ? '+' : ''}${nf1.format(pct)}%)</span>`;
+    return v === 0
       ? '<span class="dim">0</span>'
       : v > 0
-      ? `<span class="delta up">▲ ${fmtSigned(v)}</span>`
-      : `<span class="delta down">▼ ${fmtSigned(v)}</span>`;
+      ? `<span class="delta up">▲ ${fmtSigned(v)}${pctTxt}</span>`
+      : `<span class="delta down">▼ ${fmtSigned(v)}${pctTxt}</span>`;
+  };
 
   function drawTable() {
     const list = rows();
@@ -345,7 +350,7 @@ export async function render(el) {
         <th class="sortable ${st.sort === 'total' ? 'sorted' : ''}" data-sort="total">Total</th>
         <th class="sortable ${st.sort === 'd1' ? 'sorted' : ''}" data-sort="d1">Δ 1 ano</th>
         <th class="sortable ${st.sort === 'd5' ? 'sorted' : ''}" data-sort="d5">Δ 5 anos</th>
-        <th>% do total</th>
+        <th>Participação</th>
       </tr></thead>
       <tbody>${list
         .map(
@@ -354,8 +359,8 @@ export async function render(el) {
             ${scoped ? '' : `<td class="dim">${esc(r.campus)}</td>`}
             ${cols.map((c) => `<td class="num">${fmtInt(r[c.key])}</td>`).join('')}
             <td class="num" style="font-weight:650;background:rgba(var(--heat-rgb),${(0.04 + (val(r) / maxV) * 0.3).toFixed(3)})">${fmtInt(val(r))}</td>
-            <td class="num">${deltaCell(r.d1)}</td>
-            <td class="num">${deltaCell(r.d5)}</td>
+            <td class="num">${deltaCell(r.d1, r.base1)}</td>
+            <td class="num">${deltaCell(r.d5, r.base5)}</td>
             <td class="num">${fmtPct((val(r) / total) * 100)}</td>
           </tr>`
         )
@@ -364,8 +369,8 @@ export async function render(el) {
         <td>${list.length} unidades</td>${scoped ? '' : '<td></td>'}
         ${cols.map((c) => `<td class="num">${fmtInt(list.reduce((a, r) => a + (r[c.key] || 0), 0))}</td>`).join('')}
         <td class="num">${fmtInt(total)}</td>
-        <td class="num">${deltaCell(list.reduce((a, r) => a + r.d1, 0))}</td>
-        <td class="num">${deltaCell(list.reduce((a, r) => a + r.d5, 0))}</td>
+        <td class="num">${deltaCell(list.reduce((a, r) => a + r.d1, 0), list.reduce((a, r) => a + r.base1, 0))}</td>
+        <td class="num">${deltaCell(list.reduce((a, r) => a + r.d5, 0), list.reduce((a, r) => a + r.base5, 0))}</td>
         <td>100%</td>
       </tr></tfoot>
     </table>`;
