@@ -45,6 +45,22 @@ export async function render(el, slug) {
     st.sortKey = 'label';
     st.sortDir = 'desc';
   }
+  // formação: progressão educacional (fundamental incompleto → doutorado)
+  const FORMACAO_RANK = [
+    'sem instru', 'fundamental ii incompleto', 'fundamental i incompleto', 'fundamental incompleto',
+    'fundamental completo', 'fundamental profission', 'fundamental supletivo',
+    'medio incompleto', 'medio completo', 'medio profission', 'medio supletivo', 'normal',
+    'especializa', 'mba', 'mestrado', 'pos-doutorado', 'doutorado', 'livre docente', 'notorio saber',
+  ];
+  const formacaoRank = (lab) => {
+    const s = norm(lab);
+    const i = FORMACAO_RANK.findIndex((k) => s.includes(k));
+    return i < 0 ? 999 : i;
+  };
+  if (meta.slug === 'formacao') {
+    st.sortKey = 'label';
+    st.sortDir = 'desc';
+  }
 
   const tot = () => cat.colTotals[st.metric];
 
@@ -166,7 +182,7 @@ export async function render(el, slug) {
             <option value="current">Maior no fim do período</option>
             <option value="delta">Maior variação absoluta</option>
             <option value="pct">Maior variação %</option>
-            <option value="label">Nome (A–Z)</option>
+            <option value="label"${meta.slug === 'formacao' ? ' selected' : ''}>${meta.slug === 'formacao' ? 'Progressão educacional' : 'Nome (A–Z)'}</option>
           </select>
           <div class="spacer"></div>
           <span class="hint" id="tableCount"></span>
@@ -318,7 +334,10 @@ export async function render(el, slug) {
       current: (a, b) => cur(b) - cur(a),
       delta: (a, b) => Math.abs(delta(b)) - Math.abs(delta(a)),
       pct: (a, b) => Math.abs(pct(b) ?? 0) - Math.abs(pct(a) ?? 0),
-      label: (a, b) => naturalCompare(cat.labels[a], cat.labels[b]),
+      label: (a, b) =>
+        meta.slug === 'formacao'
+          ? formacaoRank(cat.labels[a]) - formacaoRank(cat.labels[b])
+          : naturalCompare(cat.labels[a], cat.labels[b]),
     }[st.sortKey];
     lis.sort(cmp);
     if (st.sortDir === 'asc') lis.reverse();
