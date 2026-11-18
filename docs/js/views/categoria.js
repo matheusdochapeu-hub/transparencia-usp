@@ -40,6 +40,11 @@ export async function render(el, slug) {
     cmpB: n - 1,
     showAll: false,
   };
+  // faixas etárias: ordem natural por idade (21-30 … 71-80, Acima de 81)
+  if (meta.slug === 'faixa-etaria') {
+    st.sortKey = 'label';
+    st.sortDir = 'desc';
+  }
 
   const tot = () => cat.colTotals[st.metric];
 
