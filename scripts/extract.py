@@ -358,7 +358,10 @@ def main():
         log(f"    {n} linhas em {len(cats)} categorias{' (sem mudanças)' if not changed else ''} ({time.time() - t0:.0f}s)")
 
     if missing:
-        write_json(os.path.join(args.out, "_missing.json"), {"missing": missing})
+        write_if_changed(
+            os.path.join(args.out, "_missing.json"),
+            {"missing": missing},
+        )
         log(f"Competências sem publicação: {', '.join(m['ref'] for m in missing)}")
 
     if args.with_campus:

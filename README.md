@@ -11,6 +11,10 @@ ranking de mudanças e análise de correlações.
 
 ![Panorama do painel](assets/preview-panorama.png)
 
+| Categoria | Correlações |
+| --- | --- |
+| ![Detalhe de categoria](assets/preview-categoria.png) | ![Matriz de correlação](assets/preview-correlacoes.png) |
+
 ---
 
 ## O que tem no painel
