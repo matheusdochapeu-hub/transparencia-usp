@@ -629,3 +629,13 @@ table.data.mini th, table.data.mini td { padding: 5px 8px; }
 .vt-hist-x { margin-top: 2px; }
 .vt-list { margin: 0; padding-left: 18px; display: grid; gap: 7px; font-size: .82rem; color: var(--muted); }
 .vt-list li b { color: var(--ink); }
+
+.vt-steps {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+  font-size: .82rem;
+  color: var(--muted);
+}
+.vt-steps b { color: var(--ink); }

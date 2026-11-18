@@ -375,10 +375,14 @@ export async function render(el) {
         : 'Nenhuma unidade desta origem tem empregos acima do efetivo. Estes são os sinais de liberação: empregos devolvidos ao banco e aposentadorias.'}</p>`;
 
     el.querySelector('#vtSim').innerHTML = `
+      <ol class="vt-steps">
+        <li><b>Olhe a folga por classe</b> no destino: é o único caso em que o D.O.E. já provou que sobram empregos.</li>
+        <li><b>Olhe as aposentadorias e as devoluções ao banco</b>: são o estoque que tende a virar vaga.</li>
+        <li><b>Confira a função</b>: expanda a unidade na tabela acima e veja as funções com servidores ativos — a permuta só funciona com função compatível.</li>
+      </ol>
       <div class="grid cols-2">
         <div>
-          <h4>Destino: ${esc(st.destino || '—')} · onde há folga estimada</h4>
-          ${destino.length
+          <h4>Destino: ${esc(st.destino || '—')} · onde há folga estimada</h4>          ${destino.length
             ? tabelaFolga(destino, '')
             : tabelaSinais(sinaisDestino, 'destino')}
           ${destino.length ? '<p class="hint">“Folga mínima” = o D.O.E. alocou mais empregos do que servidores existem hoje. É o sinal mais forte de vaga disponível.</p>' : ''}
