@@ -137,6 +137,21 @@ function updatePeriodBadge() {
   }
 }
 
+/* ------------------------------------------------------------------ população (ativos / aposentados / todos) */
+function fillPopulationSelect() {
+  const sel = document.getElementById('popSel');
+  if (!sel) return;
+  sel.value = store.population;
+  sel.addEventListener('change', async () => {
+    store.setPopulation(sel.value);
+    const url = new URL(location.href);
+    if (sel.value === 'ativo') url.searchParams.delete('pop');
+    else url.searchParams.set('pop', sel.value);
+    history.replaceState(null, '', url);
+    await route();
+  });
+}
+
 /* ------------------------------------------------------------------ rotas */
 const ROUTES = [
   { key: 'panorama', re: /^\/?$|^\/panorama$/, label: 'Panorama', mod: Panorama },
@@ -250,6 +265,7 @@ async function boot() {
   try {
     const index = await store.init();
     fillScopeSelect();
+    fillPopulationSelect();
     updatePeriodBadge();
     document.getElementById('updLabel').textContent = store.isGlobal
       ? `Atualizado em ${fmtDate(index.generatedAt)}`

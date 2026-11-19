@@ -105,6 +105,14 @@
       </button>
       <div class="crumbs" id="crumbs"></div>
       <div class="topbar-right">
+        <label class="pop-wrap" for="popSel">
+          <span class="pop-cap">População</span>
+          <select id="popSel" class="scope-sel pop-sel" aria-label="População: servidores ativos, aposentados ou todos" title="Mostrar apenas ativos, apenas aposentados ou todos os vínculos">
+            <option value="ativo">Ativos</option>
+            <option value="apos">Aposentados</option>
+            <option value="todos">Todos</option>
+          </select>
+        </label>
         <select id="scopeSel" class="scope-sel" aria-label="Recorte: USP, campus ou unidade"></select>
         <span class="badge" id="periodBadge" title="Competência mais recente disponível">—</span>
         <button class="icon-btn" id="themeBtn" aria-label="Alternar tema claro/escuro" title="Alternar tema">

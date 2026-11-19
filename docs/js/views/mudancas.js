@@ -53,7 +53,7 @@ export async function render(el) {
     ${pageHead({
       eyebrow: 'Comparar',
       title: 'O que mudou',
-      lead: 'Ranking de todas as categorias pela variação de efetivo entre duas competências. Escolha uma janela pronta ou defina um período personalizado, e filtre por valor, categoria, direção ou magnitude.',
+      lead: `Ranking de todas as categorias pela variação de efetivo entre duas competências — <b>${esc(store.popLong)}</b>. Escolha uma janela pronta ou defina um período personalizado, e filtre por valor, categoria, direção ou magnitude.`,
     })}
     ${
       brokenCats.length
@@ -173,7 +173,7 @@ export async function render(el) {
       const span = toIdx - fromIdx;
       const k = Math.min(14, span + 1);
       for (let li = 0; li < cat.labels.length; li++) {
-        const series = cat.m.total[li];
+        const series = cat.m[store.metric][li];
         const a = series[fromIdx] || 0;
         const b = series[toIdx] || 0;
         const delta = b - a;

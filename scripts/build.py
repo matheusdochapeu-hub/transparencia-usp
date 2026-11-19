@@ -67,6 +67,17 @@ DESCRIPTIONS = {
 }
 VINCULOS = ["doc", "tecAdm", "docApos", "tecAdmApos"]
 
+# Populações exibidas no painel. As linhas compactas são
+# [refIdx, labelIdx, doc, tecAdm, docApos, tecAdmApos].
+POPS = ("ativo", "apos", "todos")
+POP_COLS = {"ativo": (2, 3), "apos": (4, 5), "todos": (2, 3, 4, 5)}
+POP_CSV_DIR = {"ativo": "ativos", "apos": "aposentados", "todos": "todos"}
+
+
+def row_pop(row, pop):
+    """Soma as colunas de vínculo correspondentes à população."""
+    return sum(int(row[i] or 0) for i in POP_COLS[pop])
+
 
 def read_json(path, default=None):
     try:
@@ -650,16 +661,26 @@ def main():
         category_payload[slug] = payload
         write_json(os.path.join(OUT, slug + ".json"), payload)
 
-        # 3) CSV largo: rótulo x competência (total de servidores)
+        # 3) CSV largo: rótulo x competência, um arquivo por população
         header = ["valor"] + [ref_labels[r] for r in ref_ids]
-        csv_rows = []
-        for li, label in enumerate(labels):
-            cells = [0] * n_refs
-            for row in rows:
-                if row[1] == li:
-                    cells[row[0]] = row[2] + row[3] + row[4] + row[5]
-            csv_rows.append([label] + cells)
-        write_csv(os.path.join(OUT, "csv", slug + ".csv"), header, csv_rows)
+        for pop in POPS:
+            csv_rows = []
+            for li, label in enumerate(labels):
+                cells = [0] * n_refs
+                for row in rows:
+                    if row[1] == li:
+                        cells[row[0]] += row_pop(row, pop)
+                # Nos recortes por população, omite rótulos sem nenhum valor
+                # (ex.: cargos de estrutura não existem para aposentados).
+                if pop != "todos" and not any(cells):
+                    continue
+                csv_rows.append([label] + cells)
+            csv_path = (
+                os.path.join(OUT, "csv", slug + ".csv")
+                if pop == "todos"
+                else os.path.join(OUT, "csv", POP_CSV_DIR[pop], slug + ".csv")
+            )
+            write_csv(csv_path, header, csv_rows)
 
         categories_meta.append(
             {
@@ -678,9 +699,18 @@ def main():
     # ---- CSV de totais ------------------------------------------------------
     write_csv(
         os.path.join(OUT, "csv", "totais.csv"),
-        ["competencia", "docente", "tecnico_administrativo", "docente_aposentado", "tecnico_administrativo_aposentado", "total"],
         [
-            [ref_labels[r], *t, sum(t)]
+            "competencia",
+            "docentes_ativos",
+            "servidores_ativos",
+            "ativos",
+            "docentes_aposentados",
+            "servidores_aposentados",
+            "aposentados",
+            "total",
+        ],
+        [
+            [ref_labels[r], t[0], t[1], t[0] + t[1], t[2], t[3], t[2] + t[3], sum(t)]
             for r, t in zip(ref_ids, totals)
         ],
     )
@@ -754,32 +784,31 @@ def main():
         print(f"  campus x categorias: {latest}")
 
     # ---- cartões-resumo por categoria --------------------------------------
+    # Cada cartão traz um resumo por população (ativos, aposentados, todos),
+    # para que a lista de categorias não misture vínculos.
     cards = []
     last_i = n_refs - 1
+    prev_i = max(0, n_refs - 13)
     for slug in ORDER:
         payload = category_payload[slug]
         labels, rows = payload["labels"], payload["rows"]
-        cur = defaultdict(int)
-        for r in rows:
-            if r[0] == last_i:
-                cur[r[1]] += r[2] + r[3] + r[4] + r[5]
-        total = sum(cur.values()) or 1
-        if not cur:
-            cards.append({"slug": slug, "title": TITLES[slug], "nValues": len(labels), "top": None, "spark": [], "total": 0})
-            continue
-        top_li = max(cur, key=cur.get)
-        series = [0] * n_refs
-        for r in rows:
-            if r[1] == top_li:
-                series[r[0]] += r[2] + r[3] + r[4] + r[5]
-        prev_i = max(0, n_refs - 13)
-        prev = series[prev_i]
-        delta = cur[top_li] - prev
-        cards.append(
-            {
-                "slug": slug,
-                "title": TITLES[slug],
-                "nValues": len(labels),
+        by_pop = {}
+        for pop in POPS:
+            by_label = defaultdict(lambda: [0] * n_refs)
+            for r in rows:
+                by_label[r[1]][r[0]] += row_pop(r, pop)
+            present = [li for li, series in by_label.items() if any(series)]
+            cur = {li: series[last_i] for li, series in by_label.items() if series[last_i]}
+            total = sum(cur.values())
+            if not cur:
+                by_pop[pop] = {"nValues": len(present), "total": 0, "top": None, "spark": []}
+                continue
+            top_li = max(cur, key=cur.get)
+            series = by_label[top_li]
+            prev = series[prev_i]
+            delta = cur[top_li] - prev
+            by_pop[pop] = {
+                "nValues": len(present),
                 "total": int(total),
                 "top": {
                     "label": labels[top_li],
@@ -790,10 +819,10 @@ def main():
                 },
                 "spark": [int(v) for v in series[-24:]],
             }
-        )
+        cards.append({"slug": slug, "title": TITLES[slug], "byPop": by_pop})
 
     # ---- movers (maiores variações) ----------------------------------------
-    def build_movers(window_refs: int | None, top: int = 14):
+    def build_movers(pop: str, window_refs: int | None, top: int = 14):
         out = []
         for slug, payload in category_payload.items():
             if slug == "categoria":
@@ -802,7 +831,7 @@ def main():
             rows = payload["rows"]
             by_label = defaultdict(dict)
             for r in rows:
-                by_label[r[1]][r[0]] = r[2] + r[3] + r[4] + r[5]
+                by_label[r[1]][r[0]] = by_label[r[1]].get(r[0], 0) + row_pop(r, pop)
             last = n_refs - 1
             base = 0 if window_refs is None else max(0, last - window_refs)
             for li, series in by_label.items():
@@ -824,37 +853,38 @@ def main():
         out.sort(key=lambda x: -abs(x["delta"]))
         return out[:top]
 
-    movers = {"last12m": build_movers(12), "all": build_movers(None)}
-    if n_refs >= 2:
-        # variação do último mês: recalcula com janela de 1
+    movers = {
+        pop: {"last12m": build_movers(pop, 12), "all": build_movers(pop, None)}
+        for pop in POPS
+    }
+    for pop in POPS:
         last_month = []
-        for slug, payload in category_payload.items():
-            if slug == "categoria":
-                continue
-            rows = payload["rows"]
-            labels = payload["labels"]
-            by_label = defaultdict(dict)
-            for r in rows:
-                by_label[r[1]][r[0]] = r[2] + r[3] + r[4] + r[5]
-            for li, series in by_label.items():
-                a = series.get(n_refs - 2, 0)
-                b = series.get(n_refs - 1, 0)
-                if abs(b - a) < 3:
+        if n_refs >= 2:
+            for slug, payload in category_payload.items():
+                if slug == "categoria":
                     continue
-                last_month.append(
-                    {
-                        "slug": slug,
-                        "label": labels[li],
-                        "from": a,
-                        "to": b,
-                        "delta": b - a,
-                        "pct": ((b - a) / a * 100) if a else None,
-                    }
-                )
-        last_month.sort(key=lambda x: -abs(x["delta"]))
-        movers["lastMonth"] = last_month[:14]
-    else:
-        movers["lastMonth"] = []
+                rows = payload["rows"]
+                labels = payload["labels"]
+                by_label = defaultdict(dict)
+                for r in rows:
+                    by_label[r[1]][r[0]] = by_label[r[1]].get(r[0], 0) + row_pop(r, pop)
+                for li, series in by_label.items():
+                    a = series.get(n_refs - 2, 0)
+                    b = series.get(n_refs - 1, 0)
+                    if abs(b - a) < 3:
+                        continue
+                    last_month.append(
+                        {
+                            "slug": slug,
+                            "label": labels[li],
+                            "from": a,
+                            "to": b,
+                            "delta": b - a,
+                            "pct": ((b - a) / a * 100) if a else None,
+                        }
+                    )
+            last_month.sort(key=lambda x: -abs(x["delta"]))
+        movers[pop]["lastMonth"] = last_month[:14]
 
     # ---- ranking de mudanças ------------------------------------------------
     windows = [
@@ -864,7 +894,7 @@ def main():
         ("all", f"Desde {ref_labels[ref_ids[0]]}", None),
     ]
     win_meta = []
-    change_rows = []
+    change_rows = {pop: [] for pop in POPS}
     slug_order = [s for s in ORDER if s != "categoria"]
     labels_by_slug = {}
     for wi, (key, label, span) in enumerate(windows):
@@ -874,37 +904,47 @@ def main():
             payload = category_payload[slug]
             labels, rows = payload["labels"], payload["rows"]
             labels_by_slug[slug] = labels
-            by_label = defaultdict(lambda: [0] * n_refs)
-            for r in rows:
-                by_label[r[1]][r[0]] += r[2] + r[3] + r[4] + r[5]
-            for li, series in by_label.items():
-                a, b = series[base], series[n_refs - 1]
-                delta = b - a
-                if abs(delta) < 3 and max(a, b) < 5:
-                    continue
-                k = min(14, n_refs - base)
-                if k <= 1:
-                    spark = [a, b]
-                else:
-                    step = (n_refs - 1 - base) / (k - 1)
-                    spark = [series[base + round(i * step)] for i in range(k)]
-                change_rows.append(
-                    [
-                        wi,
-                        slug_order.index(slug),
-                        int(li),
-                        int(a),
-                        int(b),
-                        int(delta),
-                        round(delta / a * 100, 2) if a else None,
-                        [int(v) for v in spark],
-                    ]
-                )
+            for pop in POPS:
+                by_label = defaultdict(lambda: [0] * n_refs)
+                for r in rows:
+                    by_label[r[1]][r[0]] += row_pop(r, pop)
+                for li, series in by_label.items():
+                    a, b = series[base], series[n_refs - 1]
+                    delta = b - a
+                    if abs(delta) < 3 and max(a, b) < 5:
+                        continue
+                    k = min(14, n_refs - base)
+                    if k <= 1:
+                        spark = [a, b]
+                    else:
+                        step = (n_refs - 1 - base) / (k - 1)
+                        spark = [series[base + round(i * step)] for i in range(k)]
+                    change_rows[pop].append(
+                        [
+                            wi,
+                            slug_order.index(slug),
+                            int(li),
+                            int(a),
+                            int(b),
+                            int(delta),
+                            round(delta / a * 100, 2) if a else None,
+                            [int(v) for v in spark],
+                        ]
+                    )
     write_json(
         os.path.join(OUT, "changes.json"),
-        {"windows": win_meta, "slugs": slug_order, "labels": labels_by_slug, "rows": change_rows},
+        {
+            "windows": win_meta,
+            "slugs": slug_order,
+            "labels": labels_by_slug,
+            "rows": change_rows,
+        },
     )
-    print(f"  mudanças: {len(change_rows)} registros em {len(windows)} janelas")
+    print(
+        "  mudanças: "
+        + ", ".join(f"{pop} {len(change_rows[pop])}" for pop in POPS)
+        + f" registros em {len(windows)} janelas"
+    )
 
     # ---- vacância de docentes (Anuário) -------------------------------------
     vacancia = build_vacancia()
@@ -948,6 +988,7 @@ def main():
             "first": ref_ids[0],
             "last": ref_ids[-1],
             "totalActive": totals[-1][0] + totals[-1][1],
+            "totalRetired": totals[-1][2] + totals[-1][3],
             "totalAll": sum(totals[-1]),
         },
     }

@@ -8,7 +8,40 @@ async function fetchJSON(url) {
   return res.json();
 }
 
-const METRICS = ['total', 'doc', 'tec', 'docApos', 'tecApos', 'apos'];
+const METRICS = ['total', 'ativo', 'doc', 'tec', 'docApos', 'tecApos', 'apos'];
+
+/** Populações oferecidas no seletor do topo. */
+export const POPS = [
+  { key: 'ativo', label: 'Ativos', long: 'servidores ativos' },
+  { key: 'apos', label: 'Aposentados', long: 'servidores aposentados' },
+  { key: 'todos', label: 'Todos', long: 'ativos + aposentados' },
+];
+const POP_KEYS = ['ativo', 'apos', 'todos'];
+
+/**
+ * Colunas de vínculo que compõem uma população, opcionalmente filtrada por
+ * carreira (docente, servidor técnico-administrativo ou ambos).
+ */
+export function populationKeys(pop, vinculo = 'ambos') {
+  const table = {
+    ativo: { doc: ['doc'], tec: ['tec'], ambos: ['doc', 'tec'] },
+    apos: { doc: ['docApos'], tec: ['tecApos'], ambos: ['docApos', 'tecApos'] },
+    todos: {
+      doc: ['doc', 'docApos'],
+      tec: ['tec', 'tecApos'],
+      ambos: ['doc', 'tec', 'docApos', 'tecApos'],
+    },
+  };
+  const set = table[pop] || table.todos;
+  return set[vinculo] || set.ambos;
+}
+
+/** Soma de métricas de uma categoria em um mês. */
+export function sumMetrics(cat, keys, li, ri) {
+  let v = 0;
+  for (const k of keys) v += cat.m[k][li][ri];
+  return v;
+}
 
 function buildMatrices(payload) {
   const n = payload.refs.length;
@@ -21,6 +54,7 @@ function buildMatrices(payload) {
     m.docApos[li][ri] = docApos;
     m.tecApos[li][ri] = tecApos;
     m.apos[li][ri] = docApos + tecApos;
+    m.ativo[li][ri] = doc + tec;
     m.total[li][ri] = doc + tec + docApos + tecApos;
   }
   const colTotals = {};
@@ -40,30 +74,85 @@ export const store = {
   _changes: undefined,
   scopeKey: 'usp',
   scopes: [],
+  population: 'ativo',
   _scopeData: null,
   _scChanged: null,
   _cards: null,
   _movers: null,
 
   async init() {
+    const qs = new URLSearchParams(location.search);
+    const pop = qs.get('pop') || localStorage.getItem('usp-population');
+    if (POP_KEYS.includes(pop)) {
+      this.population = pop;
+      if (qs.get('pop')) localStorage.setItem('usp-population', pop);
+    }
     this.index = await fetchJSON(`${BASE}index.json`);
     try {
       this.scopes = (await fetchJSON(`${BASE}scopes.json`)).scopes || [];
     } catch {
       this.scopes = [];
     }
-    const qs = new URLSearchParams(location.search).get('scope');
-    const saved = qs || localStorage.getItem('usp-scope');
-    if (saved && (saved === 'usp' || this.scopes.some((s) => s.key === saved))) {
-      if (saved !== 'usp') {
+    const scope = qs.get('scope') || localStorage.getItem('usp-scope');
+    if (scope && (scope === 'usp' || this.scopes.some((s) => s.key === scope))) {
+      if (scope !== 'usp') {
         try {
-          await this.loadScope(saved);
+          await this.loadScope(scope);
         } catch {
           this.scopeKey = 'usp';
         }
       }
     }
     return this.index;
+  },
+
+  /** 'ativo' | 'apos' | 'todos'. */
+  setPopulation(pop) {
+    if (!POP_KEYS.includes(pop) || pop === this.population) return;
+    this.population = pop;
+    this._cards = null;
+    this._movers = null;
+    localStorage.setItem('usp-population', pop);
+  },
+
+  get popInfo() {
+    return POPS.find((p) => p.key === this.population) || POPS[0];
+  },
+
+  get popLabel() {
+    return this.popInfo.label;
+  },
+
+  get popLong() {
+    return this.popInfo.long;
+  },
+
+  /** Métrica equivalente nas matrizes de categoria. */
+  get metric() {
+    return this.population === 'ativo' ? 'ativo' : this.population === 'apos' ? 'apos' : 'total';
+  },
+
+  /** Colunas de vínculo da população atual (opcionalmente por carreira). */
+  keys(vinculo = 'ambos') {
+    return populationKeys(this.population, vinculo);
+  },
+
+  /** Total da população em um mês (competência indexada). */
+  popTotal(ri, pop = this.population) {
+    if (this.isGlobal) {
+      const t = this.totals[ri] || [0, 0, 0, 0];
+      if (pop === 'ativo') return t[0] + t[1];
+      if (pop === 'apos') return t[2] + t[3];
+      return t[0] + t[1] + t[2] + t[3];
+    }
+    const rows = (this._scopeData.categories.categoria || {}).rows || [];
+    // o recorte traz uma linha por vínculo; soma as colunas correspondentes
+    let sum = 0;
+    for (const row of rows) {
+      if (row[0] !== ri) continue;
+      sum += pop === 'ativo' ? row[2] + row[3] : pop === 'apos' ? row[4] + row[5] : row[2] + row[3] + row[4] + row[5];
+    }
+    return sum;
   },
 
   async loadScope(key) {
@@ -139,22 +228,36 @@ export const store = {
     return Promise.all(this.index.categories.map((c) => this.category(c.slug)));
   },
 
-  /** Cartões-resumo da página Categorias (globais vêm prontos; recortes são calculados). */
+  /** Cartões-resumo da página Categorias, sempre por população. */
   cards() {
-    if (this.isGlobal) return this.index.cards || [];
+    const pop = this.population;
+    if (this.isGlobal) {
+      return (this.index.cards || []).map((c) => {
+        // Função Estrutura só existe para ativos — não faz sentido "vazia" em aposentados.
+        const restricted = c.slug === 'funcao-estrutura';
+        return { slug: c.slug, title: c.title, restricted, ...(c.byPop?.[restricted ? 'ativo' : pop] || {}) };
+      });
+    }
     if (this._cards) return this._cards;
     const n = this.refs.length;
     const curI = n - 1;
     const prevI = Math.max(0, n - 13);
+    const sumPop = (row, p) =>
+      p === 'ativo' ? row[2] + row[3] : p === 'apos' ? row[4] + row[5] : row[2] + row[3] + row[4] + row[5];
     const out = [];
     for (const meta of this.index.categories) {
       const c = this._scopeData.categories[meta.slug];
       if (!c) continue;
+      const restricted = meta.slug === 'funcao-estrutura';
+      const effective = restricted ? 'ativo' : pop;
       const cur = new Map();
       const prev = new Map();
-      const seriesByLabel = new Map();
-      for (const [ri, li, a, b, cc, d] of c.rows) {
-        const v = a + b + cc + d;
+      const present = new Set();
+      for (const row of c.rows) {
+        const [ri, li] = row;
+        const v = sumPop(row, effective);
+        if (!v) continue;
+        present.add(li);
         if (ri === curI) cur.set(li, (cur.get(li) || 0) + v);
         if (ri === prevI) prev.set(li, (prev.get(li) || 0) + v);
       }
@@ -163,16 +266,17 @@ export const store = {
       for (const [li, v] of cur) if (v > topV) { topV = v; topLi = li; }
       const total = [...cur.values()].reduce((a, b) => a + b, 0);
       if (topLi < 0) {
-        out.push({ slug: meta.slug, title: meta.title, nValues: c.labels.length, top: null, spark: [], total: 0 });
+        out.push({ slug: meta.slug, title: meta.title, restricted, nValues: present.size, top: null, spark: [], total: 0 });
         continue;
       }
       const series = new Array(n).fill(0);
-      for (const [ri, li, a, b, cc, d] of c.rows) if (li === topLi) series[ri] += a + b + cc + d;
+      for (const row of c.rows) if (row[1] === topLi) series[row[0]] += sumPop(row, effective);
       const p = prev.get(topLi) || 0;
       out.push({
         slug: meta.slug,
         title: meta.title,
-        nValues: c.labels.length,
+        restricted,
+        nValues: present.size,
         total,
         top: { label: c.labels[topLi], value: topV, share: (topV / (total || 1)) * 100, delta: topV - p, pct: p ? ((topV - p) / p) * 100 : null },
         spark: series.slice(-24),
@@ -182,11 +286,14 @@ export const store = {
     return out;
   },
 
-  /** Maiores mudanças (globais vêm prontas; recortes são calculados). */
+  /** Maiores mudanças da população atual (globais vêm prontas; recortes são calculados). */
   movers() {
-    if (this.isGlobal) return this.index.movers || {};
+    if (this.isGlobal) return (this.index.movers || {})[this.population] || {};
     if (this._movers) return this._movers;
     const n = this.refs.length;
+    const pop = this.population;
+    const sumPop = (row) =>
+      pop === 'ativo' ? row[2] + row[3] : pop === 'apos' ? row[4] + row[5] : row[2] + row[3] + row[4] + row[5];
     const build = (span) => {
       const base = span == null ? 0 : Math.max(0, n - 1 - span);
       const out = [];
@@ -195,10 +302,11 @@ export const store = {
         const c = this._scopeData.categories[meta.slug];
         if (!c) continue;
         const byLabel = new Map();
-        for (const [ri, li, a, b, cc, d] of c.rows) {
+        for (const row of c.rows) {
+          const [ri, li] = row;
           if (!byLabel.has(li)) byLabel.set(li, {});
           const o = byLabel.get(li);
-          o[ri] = (o[ri] || 0) + a + b + cc + d;
+          o[ri] = (o[ri] || 0) + sumPop(row);
         }
         for (const [li, o] of byLabel) {
           const A = o[base] || 0;
@@ -232,16 +340,24 @@ export const store = {
 
   async changes() {
     if (this.isGlobal) {
-      if (this._changes !== undefined) return this._changes;
-      this._changes = await fetchJSON(`${BASE}changes.json`).catch(() => null);
-      return this._changes;
+      if (this._changes === undefined) {
+        this._changes = await fetchJSON(`${BASE}changes.json`).catch(() => null);
+      }
+      const ch = this._changes;
+      if (!ch) return null;
+      const rows = Array.isArray(ch.rows) ? ch.rows : (ch.rows || {})[this.population] || [];
+      return { ...ch, rows };
     }
     return this._scopeChanges();
   },
 
-  /** changes.json equivalente, calculado a partir do recorte. */
+  /** changes.json equivalente, calculado a partir do recorte (por população). */
   _scopeChanges() {
-    if (this._scChanged) return this._scChanged;
+    if (!this._scChanged) this._scChanged = this._buildScopeChanges();
+    return { ...this._scChanged, rows: this._scChanged.rowsByPop[this.population] || [] };
+  },
+
+  _buildScopeChanges() {
     const n = this.refs.length;
     const refs = this.refs;
     const windows = [
@@ -252,35 +368,44 @@ export const store = {
     ];
     const slugs = this.index.categories.map((c) => c.slug).filter((s) => s !== 'categoria');
     const labels = {};
-    const rows = [];
+    const rowsByPop = { ativo: [], apos: [], todos: [] };
+    const sumPop = (row, pop) =>
+      pop === 'ativo' ? row[2] + row[3] : pop === 'apos' ? row[4] + row[5] : row[2] + row[3] + row[4] + row[5];
+    for (let si = 0; si < slugs.length; si++) {
+      const c = this._scopeData.categories[slugs[si]];
+      if (!c) continue;
+      labels[slugs[si]] = c.labels;
+    }
     windows.forEach((w, wi) => {
       const base = w.span == null ? 0 : Math.max(0, n - 1 - w.span);
       for (let si = 0; si < slugs.length; si++) {
         const c = this._scopeData.categories[slugs[si]];
         if (!c) continue;
-        labels[slugs[si]] = c.labels;
-        const byLabel = new Map();
-        for (const [ri, li, a, b, cc, d] of c.rows) {
-          if (!byLabel.has(li)) byLabel.set(li, new Array(n).fill(0));
-          byLabel.get(li)[ri] += a + b + cc + d;
-        }
-        for (const [li, series] of byLabel) {
-          const A = series[base] || 0;
-          const B = series[n - 1] || 0;
-          const delta = B - A;
-          if (Math.abs(delta) < 3 && Math.max(A, B) < 5) continue;
-          const k = Math.min(14, n - base);
-          const spark = [];
-          if (k <= 1) spark.push(A, B);
-          else {
-            const step = (n - 1 - base) / (k - 1);
-            for (let i = 0; i < k; i++) spark.push(series[base + Math.round(i * step)] || 0);
+        for (const pop of POP_KEYS) {
+          const byLabel = new Map();
+          for (const row of c.rows) {
+            const [ri, li] = row;
+            if (!byLabel.has(li)) byLabel.set(li, new Array(n).fill(0));
+            byLabel.get(li)[ri] += sumPop(row, pop);
           }
-          rows.push([wi, si, li, A, B, delta, A ? Math.round((delta / A) * 10000) / 100 : null, spark]);
+          for (const [li, series] of byLabel) {
+            const A = series[base] || 0;
+            const B = series[n - 1] || 0;
+            const delta = B - A;
+            if (Math.abs(delta) < 3 && Math.max(A, B) < 5) continue;
+            const k = Math.min(14, n - base);
+            const spark = [];
+            if (k <= 1) spark.push(A, B);
+            else {
+              const step = (n - 1 - base) / (k - 1);
+              for (let i = 0; i < k; i++) spark.push(series[base + Math.round(i * step)] || 0);
+            }
+            rowsByPop[pop].push([wi, si, li, A, B, delta, A ? Math.round((delta / A) * 10000) / 100 : null, spark]);
+          }
         }
       }
     });
-    this._scChanged = {
+    return {
       windows: windows.map((w) => ({
         key: w.key,
         label: w.label,
@@ -290,9 +415,8 @@ export const store = {
       })),
       slugs,
       labels,
-      rows,
+      rowsByPop,
     };
-    return this._scChanged;
   },
 
   async vacancia() {

@@ -51,6 +51,12 @@ export async function render(el) {
     .join('')}</div>`;
 
   const movers = (moversAll?.lastMonth || []).slice(0, 8);
+  const popWords =
+    store.population === 'ativo'
+      ? 'servidores ativos'
+      : store.population === 'apos'
+      ? 'servidores aposentados'
+      : 'servidores ativos e aposentados';
   const moverRows = movers
     .map((m) => {
       const meta = index.categories.find((c) => c.slug === m.slug);
@@ -87,7 +93,7 @@ export async function render(el) {
     <div class="section split">
       <section class="card">
         <div class="card-head">
-          <div><h3>Evolução do efetivo por vínculo</h3><p>Cada faixa soma o total de servidores registrados na competência.</p></div>
+          <div><h3>Evolução do efetivo por vínculo</h3><p>Cada faixa soma o total de servidores registrados na competência — ativos e aposentados sempre separados.</p></div>
           <div class="spacer"></div>
           ${seg('range', [
             { v: '5a', label: '5 anos' },
@@ -107,14 +113,14 @@ export async function render(el) {
     <div class="section grid cols-2">
       <section class="card">
         <div class="card-head">
-          <div><h3>Maiores mudanças no último mês</h3><p>Variação absoluta de servidores entre ${esc(refs[Math.max(0, n - 2)].label)} e ${esc(refs[n - 1].label)}.</p></div>
+          <div><h3>Maiores mudanças no último mês</h3><p>Variação absoluta de ${esc(popWords)} entre ${esc(refs[Math.max(0, n - 2)].label)} e ${esc(refs[n - 1].label)}.</p></div>
           <div class="spacer"></div>
           <a class="btn" href="#/mudancas">Ver ranking completo</a>
         </div>
         ${moverRows ? `<div class="table-wrap" style="max-height:none"><table class="data"><thead><tr><th>Valor</th><th>Antes</th><th>Depois</th><th>Δ</th></tr></thead><tbody>${moverRows}</tbody></table></div>` : '<div class="empty">Sem variações registradas.</div>'}
       </section>
       <section class="card" id="campusCard">
-        <div class="card-head"><div><h3>Efetivo por campus</h3><p>${esc(refs[n - 1].label)} · soma dos campi equivale ao total da USP.</p></div></div>
+        <div class="card-head"><div><h3>Efetivo por campus</h3><p>${esc(refs[n - 1].label)} · ativos e aposentados lado a lado; a soma dos campi equivale ao total da USP.</p></div></div>
         <div id="campusBars"><div class="skeleton" style="height:210px"></div></div>
         <p class="hint" id="vacHint" style="margin-top:12px"></p>
       </section>
@@ -173,8 +179,11 @@ export async function render(el) {
   });
 
   el.querySelector('#dlTotais')?.addEventListener('click', () => {
-    const header = ['competencia', 'docentes', 'servidores', 'docentes_aposentados', 'servidores_aposentados', 'total'];
-    const rows = refs.map((r, i) => [r.label, ...T[i], T[i].reduce((a, b) => a + b, 0)]);
+    const header = ['competencia', 'docentes_ativos', 'servidores_ativos', 'ativos', 'docentes_aposentados', 'servidores_aposentados', 'aposentados', 'total'];
+    const rows = refs.map((r, i) => {
+      const [doc, tec, da, ta] = T[i];
+      return [r.label, doc, tec, doc + tec, da, ta, da + ta, doc + tec + da + ta];
+    });
     downloadFile('usp-totais-servidores.csv', toCSV(header, rows));
   });
 
@@ -190,10 +199,28 @@ export async function render(el) {
     box.innerHTML = '<div class="empty">Dados por campus não disponíveis.</div>';
     return;
   }
-  const items = campus.campuses
-    .map((c) => ({ label: c.name, value: c.series[c.series.length - 1].reduce((a, b) => a + b, 0), color: 'var(--brand)' }))
+  const lastSeries = (c) => c.series[c.series.length - 1] || [0, 0, 0, 0];
+  const campusActive = campus.campuses
+    .map((c) => ({ label: c.name, value: lastSeries(c)[0] + lastSeries(c)[1] }))
     .sort((a, b) => b.value - a.value);
-  hBars(box, { items, fmt: fmtInt });
+  const campusRetired = campus.campuses
+    .map((c) => ({ label: c.name, value: lastSeries(c)[2] + lastSeries(c)[3] }))
+    .sort((a, b) => b.value - a.value);
+  const sumActive = campusActive.reduce((a, c) => a + c.value, 0);
+  const sumRetired = campusRetired.reduce((a, c) => a + c.value, 0);
+  const cap = (color, name, total) =>
+    `<p class="hint" style="display:flex;align-items:center;gap:6px;margin:0 0 8px"><span style="display:inline-block;width:9px;height:9px;border-radius:2.5px;background:${color}"></span>${name} <b style="color:var(--ink)">${fmtInt(total)}</b></p>`;
+  box.innerHTML = `
+    <div>${cap('var(--c2)', 'Servidores ativos', sumActive)}<div id="campusActive"></div></div>
+    <div style="margin-top:16px">${cap('var(--c3)', 'Aposentados', sumRetired)}<div id="campusRetired"></div></div>`;
+  hBars(box.querySelector('#campusActive'), {
+    items: campusActive.map((x) => ({ ...x, color: 'var(--c2)' })),
+    fmt: fmtInt,
+  });
+  hBars(box.querySelector('#campusRetired'), {
+    items: campusRetired.map((x) => ({ ...x, color: 'var(--c3)' })),
+    fmt: fmtInt,
+  });
 
   // vacância de docentes (Anuário) — resumo com link (apenas recorte USP)
   const vac = store.isGlobal ? index.vacancia : null;

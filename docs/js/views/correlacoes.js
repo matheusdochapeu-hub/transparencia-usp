@@ -40,17 +40,21 @@ export async function render(el) {
   el.innerHTML = `${pageHead({
     eyebrow: 'Analisar',
     title: 'Correlações entre categorias',
-    lead: 'Compara a trajetória mensal de indicadores de categorias diferentes. Por padrão usamos a <b>variação mensal da participação</b>, que reduz correlações espúrias causadas por tendências comuns.',
+    lead: `Compara a trajetória mensal de indicadores de categorias diferentes — <b>${esc(store.popLong)}</b>. Por padrão usamos a <b>variação mensal da participação</b>, que reduz correlações espúrias causadas por tendências comuns.`,
   })}
   <div class="loading-wrap" style="padding:8vh 0"><div class="spinner"></div><p>Carregando as 11 categorias…</p></div>`;
 
   const cats = await store.allCategories();
+  const metric = store.metric;
 
   /* ------------------------------------------------------ indicadores */
   const paletteBySlug = Object.fromEntries(index.categories.map((c, i) => [c.slug, `var(--c${(i % 8) + 1})`]));
   const inds = [];
   for (const cat of cats) {
-    const ordered = cat.labels.map((_, i) => i).sort((a, b) => cat.m.total[b][n - 1] - cat.m.total[a][n - 1]);
+    const hasData = (li) => cat.m[metric][li].some((v) => v > 0);
+    const ordered = cat.labels.map((_, i) => i).filter(hasData);
+    const totalOf = (li) => cat.m[metric][li].reduce((a, b) => a + b, 0);
+    ordered.sort((a, b) => cat.m[metric][b][n - 1] - cat.m[metric][a][n - 1] || totalOf(b) - totalOf(a));
     for (const li of ordered) {
       const label = cat.labels[li];
       if (!label || /^total$/i.test(label)) continue;
@@ -91,8 +95,8 @@ export async function render(el) {
   }
 
   function seriesFor(ind) {
-    const arr = ind.cat.m.total[ind.li];
-    const tot = ind.cat.colTotals.total;
+    const arr = ind.cat.m[metric][ind.li];
+    const tot = ind.cat.colTotals[metric];
     const out = new Array(n).fill(null);
     const s = startIdx();
     for (let i = s; i < n; i++) {
@@ -127,7 +131,7 @@ export async function render(el) {
     </div>
 
     <div class="card" style="margin-bottom:16px">
-      <div class="card-head"><div><h3>Séries no cálculo</h3><p>Marque até 24 indicadores — a matriz usa exatamente os selecionados. <b>Categoria</b> é o vínculo (docente/técnico/aposentado); os níveis <b>Básico</b>, <b>Técnico</b> e <b>Superior</b> (analistas) ficam em <b>Classe</b>.</p></div><div class="spacer"></div>
+      <div class="card-head"><div><h3>Séries no cálculo</h3><p>Marque até 24 indicadores — a matriz usa exatamente os selecionados. Os indicadores são calculados sobre <b>${esc(store.popLong)}</b>. <b>Categoria</b> é o vínculo; os níveis <b>Básico</b>, <b>Técnico</b> e <b>Superior</b> (analistas) ficam em <b>Classe</b>.</p></div><div class="spacer"></div>
         <input type="search" id="pq" placeholder="Buscar indicador…" style="width:240px" aria-label="Buscar indicador">
       </div>
       <div id="picker" style="max-height:190px;overflow:auto;display:flex;flex-direction:column;gap:10px"></div>

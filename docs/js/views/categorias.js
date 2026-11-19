@@ -10,13 +10,23 @@ export async function render(el) {
   const cards = store.cards();
   const refs = store.refs;
   const n = store.totals.length;
+  const pop = store.population;
+  const T = store.totals;
+  const lastT = T[T.length - 1] || [0, 0, 0, 0];
+  const popLead =
+    pop === 'ativo'
+      ? 'As contagens abaixo são <b>apenas de servidores ativos</b> — aposentados ficam de fora.'
+      : pop === 'apos'
+      ? 'As contagens abaixo são <b>apenas de servidores aposentados</b> — o efetivo ativo fica de fora.'
+      : 'As contagens abaixo somam <b>servidores ativos e aposentados</b> — use o seletor População para separar.';
+  const popBadge = `<span class="badge" title="Totais da competência mais recente neste recorte">${fmtInt(lastT[0] + lastT[1])} ativos · ${fmtInt(lastT[2] + lastT[3])} aposentados</span>`;
 
   el.innerHTML = `
     ${pageHead({
       eyebrow: store.isGlobal ? 'Explorar' : `Recorte · ${store.scopeInfo.name}`,
       title: 'Categorias',
-      lead: `Onze recortes do efetivo — de classe e jornada a raça/cor e nacionalidade. Cada categoria tem série mensal desde ${esc(refs[0].label)} e tabelas comparativas entre períodos.`,
-      actions: `<a class="btn" href="#/mudancas">Ranking de mudanças</a>`,
+      lead: `Onze recortes do efetivo — de classe e jornada a raça/cor e nacionalidade. Cada categoria tem série mensal desde ${esc(refs[0].label)} e tabelas comparativas entre períodos. ${popLead}`,
+      actions: `${popBadge}<a class="btn" href="#/mudancas">Ranking de mudanças</a>`,
     })}
     <div class="grid auto">
       ${cards
@@ -35,9 +45,9 @@ export async function render(el) {
             <div class="cc-foot">
               ${
                 top
-                  ? `<span><b class="cc-big">${esc(top.label)}</b><br><span class="hint">${fmtPct(top.share)} do total · ${fmtInt(top.value)}</span></span>
+                  ? `<span><b class="cc-big">${esc(top.label)}</b><br><span class="hint">${fmtPct(top.share)} ${c.restricted ? 'dos ativos' : pop === 'ativo' ? 'dos ativos' : pop === 'apos' ? 'dos aposentados' : 'do total'} · ${fmtInt(top.value)}</span></span>
                      <span class="delta ${dir}" title="Variação em 12 meses">${top.delta > 0 ? '▲' : top.delta < 0 ? '▼' : '·'} ${fmtSigned(top.delta)}</span>`
-                  : '<span class="hint">sem dados</span>'
+                  : '<span class="hint">sem dados nesta população</span>'
               }
             </div>
           </a>`;
@@ -45,5 +55,10 @@ export async function render(el) {
         .join('')}
     </div>
     <p class="hint" style="margin-top:16px">Competência mais recente: <b>${esc(refs[n - 1].label)}</b>. Clique em um cartão para ver a série completa e comparar períodos.</p>
+    ${
+      pop !== 'ativo'
+        ? `<p class="hint" style="margin-top:8px">Nota: no portal, todos os aposentados aparecem na faixa “até 05 anos” de <b>Tempo USP</b> — por isso essa categoria não é informativa para inativos.</p>`
+        : ''
+    }
   `;
 }

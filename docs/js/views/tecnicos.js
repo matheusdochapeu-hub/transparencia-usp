@@ -259,7 +259,7 @@ export async function render(el) {
       const rest = items.slice(10).reduce((a, x) => a + x.value, 0);
       if (rest > 0) top.push({ label: 'Outros', value: rest });
       const total = top.reduce((a, x) => a + x.value, 0) || 1;
-      sub.textContent = `${cfg.label} · ${store.refLabels[ri]}${st.career !== 'all' ? ' · total (sem corte por carreira)' : ''}`;
+      sub.textContent = `${cfg.label} · ${store.refLabels[ri]} · servidores técnico-administrativos ativos${st.career !== 'all' ? ' · total (sem corte por carreira)' : ''}`;
       hBars(box, {
         items: top.map((x) => ({ ...x, color: 'var(--c2)' })),
         fmt: (v) => `${fmtInt(v)} (${fmtPct((v / total) * 100)})`,

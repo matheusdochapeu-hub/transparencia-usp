@@ -44,6 +44,27 @@ O seletor no topo filtra **todo o painel** por campi (histórico completo, 2015�
 unidade (últimos 24 meses): panorama, categorias, comparador de períodos e ranking de mudanças
 passam a refletir apenas aquele recorte. Deep link: `?scope=campus-10` ou `?scope=unit-EACH`.
 
+### Ativos e aposentados separados
+
+O portal publica ativos e aposentados na mesma série, o que mistura realidades diferentes —
+por exemplo, uma faixa etária de 81+ anos é quase toda de aposentados. O seletor
+**População** no topo separa as duas leituras:
+
+| Opção | O que mostra |
+| --- | --- |
+| **Ativos** (padrão) | docentes ativos + servidores técnico-administrativos ativos |
+| **Aposentados** | docentes e servidores aposentados |
+| **Todos** | soma dos dois vínculos |
+
+A escolha vale para o painel inteiro: panorama (inclusive maiores mudanças e efetivo por
+campus), lista e detalhe de categorias, comparador de períodos, ranking de mudanças,
+correlações e exportações. Deep link: `?pop=apos` ou `?pop=todos`.
+
+Cada categoria mantém a coerência com a população escolhida — a soma dos valores equivale ao
+total do mês, exceto **Função Estrutura**, que só existe para servidores ativos. Os CSVs por
+categoria são publicados em três pastas (`docs/data/csv/` para todos, `csv/ativos/` e
+`csv/aposentados/`), e cada download feito nas telas já sai no recorte selecionado.
+
 ## Importar a vacância de servidores (extrato do DRH)
 
 A USP **não publica** cargos em vacância da carreira técnico-administrativa. Quando o DRH

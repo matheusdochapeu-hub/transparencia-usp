@@ -1,6 +1,6 @@
 /* Detalhe de uma categoria: evolução, tabela comparativa, comparador e campus. */
 
-import { store, periodColumns } from '../data.js';
+import { store, periodColumns, populationKeys, sumMetrics } from '../data.js';
 import { lineChart, sparklineSVG } from '../charts.js';
 import { pageHead, card, seg, bindSegs, heatStyle, notice } from '../ui.js';
 import {
@@ -9,11 +9,11 @@ import {
 
 const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const VINC_OPTS = [
-  { v: 'total', label: 'Todos' },
+  { v: 'ambos', label: 'Docentes + servidores' },
   { v: 'doc', label: 'Docentes' },
   { v: 'tec', label: 'Servidores' },
-  { v: 'apos', label: 'Aposentados' },
 ];
+const CAMPUS_COL = { doc: 1, tec: 2, docApos: 3, tecApos: 4 };
 
 export async function render(el, slug) {
   const cat = await store.category(slug);
@@ -22,13 +22,16 @@ export async function render(el, slug) {
   const n = refs.length;
   const isVinculo = meta.kind === 'vinculo';
   const isStructure = meta.kind === 'structure';
-  const nLabels = cat.labels.length;
+  const population = store.population;
+  const popTitle =
+    population === 'ativo' ? 'Ativos' : population === 'apos' ? 'Aposentados' : 'Todos os vínculos';
+  const popWords =
+    population === 'ativo' ? 'servidores ativos' : population === 'apos' ? 'servidores aposentados' : 'ativos e aposentados';
 
   const st = {
-    metric: isStructure ? 'doc' : 'total',
     mode: 'count',
     range: 'tudo',
-    chartMode: nLabels > 40 ? 'lines' : 'stacked',
+    chartMode: cat.labels.length > 40 ? 'lines' : 'stacked',
     topN: 8,
     off: new Set(),
     focus: null,
@@ -36,6 +39,7 @@ export async function render(el, slug) {
     sortKey: 'current',
     sortDir: 'desc',
     q: '',
+    vinculo: 'ambos',
     cmpA: Math.max(0, n - 13),
     cmpB: n - 1,
     showAll: false,
@@ -81,10 +85,54 @@ export async function render(el, slug) {
     st.sortDir = 'desc';
   }
 
-  const tot = () => cat.colTotals[st.metric];
+  /* ------------------------------------------------------- população/vínculo */
+  // "Função Estrutura" só existe para servidores ativos: mantém a leitura mesmo
+  // quando o seletor global está em "Aposentados".
+  const metricKeys = () =>
+    isStructure ? ['doc'] : populationKeys(population, isVinculo ? 'ambos' : st.vinculo);
+  let currentKeys = metricKeys();
+
+  const scopeWords = () => {
+    if (isStructure) return 'servidores ativos';
+    if (isVinculo || st.vinculo === 'ambos') return popWords;
+    const role = st.vinculo === 'doc' ? 'docentes' : 'servidores técnico-administrativos';
+    const suffix = population === 'ativo' ? 'ativos' : population === 'apos' ? 'aposentados' : 'de todos os vínculos';
+    return `${role} ${suffix}`;
+  };
+
+  let _totKey = '';
+  let _totArr = null;
+  function tot() {
+    const k = currentKeys.join('+');
+    if (k !== _totKey) {
+      _totKey = k;
+      _totArr = new Float64Array(n);
+      for (const key of currentKeys) {
+        const col = cat.colTotals[key];
+        for (let i = 0; i < n; i++) _totArr[i] += col[i];
+      }
+    }
+    return _totArr;
+  }
+
+  let _presentKey = '';
+  let _present = null;
+  function presentLabels() {
+    const k = currentKeys.join('+');
+    if (k !== _presentKey) {
+      _presentKey = k;
+      _present = cat.labels
+        .map((_, li) => li)
+        .filter((li) => {
+          for (let ri = 0; ri < n; ri++) if (sumMetrics(cat, currentKeys, li, ri)) return true;
+          return false;
+        });
+    }
+    return _present.slice();
+  }
 
   function raw(li, ri) {
-    return cat.m[st.metric][li][ri];
+    return sumMetrics(cat, currentKeys, li, ri);
   }
   function value(li, ri) {
     if (st.mode === 'share') {
@@ -101,14 +149,30 @@ export async function render(el, slug) {
   const curTot = tot()[lastI];
   const firstI = 0;
   const deltaTotal = curTot - tot()[firstI];
-  const topLi = cat.labels.map((_, i) => i).sort((a, b) => raw(b, lastI) - raw(a, lastI))[0];
-  const topShare = raw(topLi, lastI) / (curTot || 1);
+  const present = presentLabels();
+  const nLabels = present.length;
+  const topLi = present.slice().sort((a, b) => raw(b, lastI) - raw(a, lastI))[0];
+  const topShare = topLi == null ? 0 : raw(topLi, lastI) / (curTot || 1);
+  const otherTot =
+    isStructure
+      ? null
+      : population === 'ativo'
+      ? cat.colTotals.apos[lastI]
+      : population === 'apos'
+      ? cat.colTotals.ativo[lastI]
+      : null;
 
   const isPyramid = meta.slug === 'faixa-etaria' || meta.slug === 'tempo-usp';
   let pyramidRows = '';
   if (isPyramid) {
-    const rows = cat.labels
-      .map((lab, li) => ({ lab, doc: cat.m.doc[li][lastI], tec: cat.m.tec[li][lastI] }))
+    const docKeys = populationKeys(population, 'doc');
+    const tecKeys = populationKeys(population, 'tec');
+    const rows = present
+      .map((li) => ({
+        lab: cat.labels[li],
+        doc: sumMetrics(cat, docKeys, li, lastI),
+        tec: sumMetrics(cat, tecKeys, li, lastI),
+      }))
       .sort((a, b) => naturalCompare(a.lab, b.lab))
       .reverse(); // maiores/mais tempo no topo
     const max = Math.max(1, ...rows.map((r) => Math.max(r.doc, r.tec)));
@@ -127,7 +191,7 @@ export async function render(el, slug) {
     ${pageHead({
       eyebrow: store.isGlobal ? 'Categoria' : `Recorte · ${esc(store.scopeInfo.name)}`,
       title: meta.title,
-      lead: meta.description,
+      lead: `${meta.description} <span class="hint">Exibindo ${esc(popWords)}${isStructure ? ' (categoria restrita a servidores ativos)' : ''}.</span>`,
       actions: `<button class="btn" id="dlCat">Baixar CSV</button>`,
     })}
     ${
@@ -148,12 +212,33 @@ export async function render(el, slug) {
           )}</div>`
         : ''
     }
+    ${
+      isStructure
+        ? `<div style="margin-bottom:16px">${notice(
+            'A categoria <b>Função Estrutura</b> conta apenas servidores <b>ativos</b> em funções de chefia/coordenação. O seletor de população do topo não se aplica a ela.',
+            'info'
+          )}</div>`
+        : ''
+    }
+    ${
+      meta.slug === 'tempo-usp' && population !== 'ativo'
+        ? `<div style="margin-bottom:16px">${notice(
+            'No portal, <b>todos os aposentados</b> aparecem na faixa <b>até 05 anos</b> de Tempo USP (provavelmente o tempo desde a aposentadoria). Para aposentados esta categoria não é informativa, e em “Todos” a primeira faixa fica inflada pelos vínculos inativos.',
+            'warn'
+          )}</div>`
+        : ''
+    }
     <div class="card" style="margin-bottom:16px">
       <div class="stat-row">
-        <div class="stat"><span class="s-label">${isStructure ? 'Servidores (último mês)' : 'Total (último mês)'}</span><span class="s-value">${fmtInt(curTot)}</span></div>
+        <div class="stat"><span class="s-label">${isStructure ? 'Servidores ativos (último mês)' : `${esc(popTitle)} (último mês)`}</span><span class="s-value">${fmtInt(curTot)}</span></div>
         <div class="stat"><span class="s-label">Variação desde ${esc(refs[firstI].label)}</span><span class="s-value">${fmtSigned(deltaTotal)} <span class="hint">(${fmtPct((deltaTotal / (tot()[firstI] || 1)) * 100)})</span></span></div>
         <div class="stat"><span class="s-label">Valores distintos</span><span class="s-value">${fmtInt(nLabels)}</span></div>
-        <div class="stat"><span class="s-label">Maior valor em ${esc(refs[lastI].label)}</span><span class="s-value">${esc(cat.labels[topLi])} <span class="hint">(${fmtPct(topShare * 100)})</span></span></div>
+        <div class="stat"><span class="s-label">Maior valor em ${esc(refs[lastI].label)}</span><span class="s-value">${topLi == null ? '–' : esc(cat.labels[topLi])} <span class="hint">(${fmtPct(topShare * 100)})</span></span></div>
+        ${
+          otherTot != null
+            ? `<div class="stat"><span class="s-label">${population === 'ativo' ? 'Aposentados' : 'Ativos'} no mesmo recorte</span><span class="s-value">${fmtInt(otherTot)} <span class="hint">(${fmtPct((otherTot / (curTot + otherTot || 1)) * 100)})</span></span></div>`
+            : ''
+        }
         <div class="stat"><span class="s-label">Série</span><span class="s-value">${n} meses</span></div>
       </div>
     </div>
@@ -172,7 +257,7 @@ export async function render(el, slug) {
           ${
             isVinculo || isStructure
               ? `<span class="hint">${isStructure ? 'Esta categoria conta apenas servidores ativos em funções de estrutura.' : 'Cada faixa representa um vínculo.'}</span>`
-              : seg('vinculo', VINC_OPTS, 'total')
+              : seg('vinculo', VINC_OPTS, st.vinculo)
           }
           <div class="spacer" style="flex:1"></div>
           ${seg('chartMode', [{ v: 'stacked', label: 'Área' }, { v: 'lines', label: 'Linhas' }], st.chartMode)}
@@ -187,7 +272,7 @@ export async function render(el, slug) {
     ${
       isPyramid
         ? `<div class="section"><div class="card">
-            <div class="card-head"><div><h3>${meta.slug === 'faixa-etaria' ? 'Pirâmide etária' : 'Pirâmide por tempo de casa'}</h3><p>Docentes (esquerda) e servidores (direita) em ${esc(refs[lastI].label)}.</p></div></div>
+            <div class="card-head"><div><h3>${meta.slug === 'faixa-etaria' ? 'Pirâmide etária' : 'Pirâmide por tempo de casa'}</h3><p>Docentes (esquerda) e servidores (direita) em ${esc(refs[lastI].label)} · ${esc(popWords)}.</p></div></div>
             <div class="legend" style="margin-bottom:8px">
               <span class="item"><span class="swatch" style="background:var(--c1)"></span>Docentes</span>
               <span class="item"><span class="swatch" style="background:var(--c2)"></span>Servidores</span>
@@ -265,9 +350,7 @@ export async function render(el, slug) {
       series = [{ name: cat.labels[li], color: colorAt(li), values: idxs.map((i) => value(li, i)) }];
       stacked = false;
     } else {
-      const ordered = cat.labels
-        .map((_, i) => i)
-        .sort((a, b) => raw(b, lastI) - raw(a, lastI));
+      const ordered = presentLabels().sort((a, b) => raw(b, lastI) - raw(a, lastI));
       const top = ordered.slice(0, st.topN);
       const visible = top.filter((li) => !st.off.has(li));
       series = visible.map((li) => ({
@@ -275,7 +358,7 @@ export async function render(el, slug) {
         color: colorAt(li),
         values: idxs.map((i) => value(li, i)),
       }));
-      const restCount = cat.labels.length - top.length;
+      const restCount = ordered.length - top.length;
       if (restCount > 0 && st.chartMode === 'stacked' && visible.length === top.length) {
         const rest = ordered.slice(top.length);
         series.unshift({
@@ -301,10 +384,10 @@ export async function render(el, slug) {
 
     const sub = el.querySelector('#chartSub');
     if (sub) {
-      sub.textContent =
-        st.mode === 'share'
-          ? `Participação de cada valor dentro do total da categoria (${st.range === 'tudo' ? 'série completa' : st.range === '5a' ? 'últimos 5 anos' : 'últimos 10 anos'}).`
-          : `Contagem de servidores por valor da categoria (${st.range === 'tudo' ? 'série completa' : st.range === '5a' ? 'últimos 5 anos' : 'últimos 10 anos'}).`;
+      const winTxt = st.range === 'tudo' ? 'série completa' : st.range === '5a' ? 'últimos 5 anos' : 'últimos 10 anos';
+      sub.textContent = `${
+        st.mode === 'share' ? 'Participação de cada valor dentro do total da categoria' : 'Contagem de servidores por valor da categoria'
+      } · ${scopeWords()} · ${winTxt}.`;
     }
 
     const legendBox = el.querySelector('#cLegend');
@@ -319,7 +402,7 @@ export async function render(el, slug) {
       });
     } else {
       el.querySelector('#focusBar').innerHTML = '';
-      const ordered = cat.labels.map((_, i) => i).sort((a, b) => raw(b, lastI) - raw(a, lastI));
+      const ordered = presentLabels().sort((a, b) => raw(b, lastI) - raw(a, lastI));
       legendBox.innerHTML =
         ordered
           .slice(0, Math.max(st.topN, 8))
@@ -329,7 +412,7 @@ export async function render(el, slug) {
           )
           .join('') +
         (hasOutros
-          ? `<span class="item" style="cursor:default"><span class="swatch" style="background:var(--faint)"></span>Outros (${cat.labels.length - st.topN})</span>`
+          ? `<span class="item" style="cursor:default"><span class="swatch" style="background:var(--faint)"></span>Outros (${presentLabels().length - st.topN})</span>`
           : '');
       legendBox.querySelectorAll('[data-legend]').forEach((node) => {
         const toggle = () => {
@@ -346,7 +429,7 @@ export async function render(el, slug) {
   /* --------------------------------------------------------------- tabela */
   function tableData() {
     const cols = periodColumns(refs, st.tableMode, st.range);
-    let lis = cat.labels.map((_, i) => i);
+    let lis = presentLabels();
     if (st.q) {
       const q = norm(st.q);
       lis = lis.filter((li) => norm(cat.labels[li]).includes(q));
@@ -462,8 +545,8 @@ export async function render(el, slug) {
   /* --------------------------------------------------------------- comparador */
   function drawCompare() {
     const A = st.cmpA, B = st.cmpB;
-    const rows = cat.labels
-      .map((_, li) => {
+    const rows = presentLabels()
+      .map((li) => {
         const a = value(li, A), b = value(li, B);
         return { li, a, b, d: b - a, pct: a ? ((b - a) / a) * 100 : null };
       })
@@ -510,13 +593,8 @@ export async function render(el, slug) {
     if (!cl || !cl.data) { sec.innerHTML = ''; return; }
     const codes = (cl.campuses || []).map((c) => String(c.code));
     const names = Object.fromEntries((cl.campuses || []).map((c) => [String(c.code), c.name]));
-    const pick = (row) => {
-      const [, doc, tec, docApos, tecApos] = row;
-      if (st.metric === 'doc') return doc;
-      if (st.metric === 'tec') return tec;
-      if (st.metric === 'apos') return docApos + tecApos;
-      return doc + tec + docApos + tecApos;
-    };
+    const keys = currentKeys;
+    const pick = (row) => keys.reduce((a, k) => a + (Number(row[CAMPUS_COL[k]]) || 0), 0);
     const byLabel = new Map();
     for (const code of codes) {
       const rows = (cl.data[code] || {})[slug] || [];
@@ -537,7 +615,7 @@ export async function render(el, slug) {
 
     sec.innerHTML = `<div class="card">
       <div class="card-head">
-        <div><h3>Por campus · ${esc(cl.label || cl.ref)}</h3><p>Distribuição do valor selecionado entre os campi. Disponível apenas para a competência mais recente da extração.</p></div>
+        <div><h3>Por campus · ${esc(cl.label || cl.ref)}</h3><p>Distribuição de ${esc(scopeWords())} entre os campi. Disponível apenas para a competência mais recente da extração.</p></div>
       </div>
       <div class="table-wrap" style="max-height:none">
         <table class="data">
@@ -560,7 +638,18 @@ export async function render(el, slug) {
   bindSegs(el, (key, v) => {
     if (key === 'mode') { st.mode = v; drawChart(); drawTable(); drawCompare(); }
     if (key === 'range') { st.range = v; drawChart(); }
-    if (key === 'vinculo') { st.metric = v; st.off.clear(); drawChart(); drawTable(); drawCompare(); drawCampus(); }
+    if (key === 'vinculo') {
+      st.vinculo = v;
+      currentKeys = metricKeys();
+      _totKey = '';
+      _presentKey = '';
+      st.off.clear();
+      st.focus = null;
+      drawChart();
+      drawTable();
+      drawCompare();
+      drawCampus();
+    }
     if (key === 'chartMode') { st.chartMode = v; drawChart(); }
     if (key === 'topN') { st.topN = Number(v); drawChart(); }
     if (key === 'tableMode') { st.tableMode = v; st.showAll = false; drawTable(); }
@@ -575,16 +664,17 @@ export async function render(el, slug) {
   selA.addEventListener('change', () => { st.cmpA = Number(selA.value); drawCompare(); });
   selB.addEventListener('change', () => { st.cmpB = Number(selB.value); drawCompare(); });
 
+  const popSlug = isStructure ? 'ativo' : population;
   el.querySelector('#dlTable')?.addEventListener('click', () => {
     const { cols, lis } = tableData();
     const header = ['valor', ...cols.map((ri) => refs[ri].label)];
     const rows = lis.map((li) => [cat.labels[li], ...cols.map((ri) => +value(li, ri).toFixed(3))]);
-    downloadFile(`usp-${slug}-tabela.csv`, toCSV(header, rows));
+    downloadFile(`usp-${slug}-${popSlug}-tabela.csv`, toCSV(header, rows));
   });
   el.querySelector('#dlCat')?.addEventListener('click', () => {
     const header = ['valor', ...refs.map((r) => r.label)];
-    const rows = cat.labels.map((label, li) => [label, ...cat.refs.map((_, ri) => cat.m.total[li][ri])]);
-    downloadFile(`usp-${slug}-serie-completa.csv`, toCSV(header, rows));
+    const rows = presentLabels().map((li) => [cat.labels[li], ...refs.map((_, ri) => raw(li, ri))]);
+    downloadFile(`usp-${slug}-${popSlug}-serie-completa.csv`, toCSV(header, rows));
   });
 
   drawChart();

@@ -32,12 +32,16 @@ export async function render(el) {
       a: `Para <b>docentes</b>, sim: o Anuário Estatístico da USP publica, por unidade, quantos cargos de professor estão <b>vagos</b> e <b>providos</b> (Tabela 2.08). A aba <a href="#/vacancia">Vacância</a> traz a série de 2014 a 2025, com totais por campus. Para <b>técnicos administrativos</b> a USP não publica essa informação — ela existe apenas no Banco de Cargos interno. O que existe é o <b>quadro efetivo</b> por carreira (Básico, Técnico e Superior), na aba <a href="#/tecnicos">Servidores</a>. Vale lembrar que <b>cargo vago não é concurso aberto</b>: a decisão de abrir edital é da Reitoria/CAA.`,
     },
     {
+      q: 'Posso separar servidores ativos de aposentados?',
+      a: `Sim. O seletor <b>População</b> no topo alterna entre <b>Ativos</b> (padrão), <b>Aposentados</b> e <b>Todos</b>. A escolha vale para o painel inteiro: panorama, categorias, comparador, ranking de mudanças e correlações. O padrão é mostrar apenas ativos, para que aposentadorias não distorçam a leitura de classe, faixa etária, formação ou jornada. O recorte fica no link: <code>?pop=apos</code> ou <code>?pop=todos</code>.`,
+    },
+    {
       q: 'Por que alguns totais não batem entre categorias?',
-      a: `Categorias diferentes podem ter populações ligeiramente distintas. “Função Estrutura”, por exemplo, conta apenas servidores ativos em funções de chefia/coordenação — por isso o total é menor. Nas demais categorias a soma equivale ao total do mês.`,
+      a: `Categorias diferentes podem ter populações ligeiramente distintas. “Função Estrutura”, por exemplo, conta apenas servidores ativos em funções de chefia/coordenação — por isso o total é menor e o seletor de população não se aplica a ela. Nas demais categorias a soma equivale ao total da população escolhida no mês.`,
     },
     {
       q: 'O que significam “aposentados”?',
-      a: `São vínculos de aposentados registrados pelo portal, apresentados em colunas separadas dos ativos. Eles não entram no “efetivo ativo”.`,
+      a: `São vínculos de aposentadoria registrados pelo portal, apresentados em colunas separadas dos ativos. Eles não entram no “efetivo ativo” e, por padrão, ficam fora das contagens do painel — use o seletor de população para vê-los isoladamente.`,
     },
     {
       q: 'Os números podem mudar depois de publicados?',
