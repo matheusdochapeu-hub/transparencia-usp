@@ -54,17 +54,43 @@ export async function render(el, slug) {
     st.sortKey = 'label';
     st.sortDir = 'desc';
   }
-  // formação: progressão educacional (fundamental incompleto → doutorado)
-  const FORMACAO_RANK = [
-    'sem instru', 'fundamental ii incompleto', 'fundamental i incompleto', 'fundamental incompleto',
-    'fundamental completo', 'fundamental profission', 'fundamental supletivo',
-    'medio incompleto', 'medio completo', 'medio profission', 'medio supletivo', 'normal',
-    'especializa', 'mba', 'mestrado', 'pos-doutorado', 'doutorado', 'livre docente', 'notorio saber',
+  // formação: progressão educacional (não alfabetizado → pós-doutorado)
+  const FORMACAO_RANK = new Map([
+    ['nao alfabetizado', 0],
+    ['alfabetizado (mobral,educar)', 1],
+    ['ensino fundamental i incompleto', 2],
+    ['ensino fundamental i completo', 3],
+    ['ensino fundamental ii incompleto', 4],
+    ['ensino fundamental ii completo', 5],
+    ['ensino fundamental profissionalizante', 6],
+    ['ensino fundamental supletivo / eja', 7],
+    ['ensino medio incompleto', 8],
+    ['ensino medio completo', 9],
+    ['ensino medio profissionalizante', 10],
+    ['ensino medio supletivo / eja', 11],
+    ['normal', 12],
+    ['superior incompleto', 13],
+    ['superior de curta duracao / sequencial', 14],
+    ['superior completo / graduacao', 15],
+    ['pos-graduacao incompleta', 16],
+    ['especializacao / mba (pos-graduacao lato sensu)', 17],
+    ['mestrado', 18],
+    ['doutorado', 19],
+    ['pos-doutorado', 20],
+    ['livre docente', 21],
+    ['notorio saber', 22],
+    ['nao informado', 999],
+  ]);
+  const FORMACAO_FALLBACK = [
+    'sem instru', 'nao alfabetizado', 'alfabetizado', 'fundamental i', 'fundamental ii',
+    'fundamental', 'medio', 'normal', 'superior', 'pos-graduacao', 'especializa', 'mba',
+    'mestrado', 'doutorado', 'livre docente', 'notorio saber', 'nao informado',
   ];
   const formacaoRank = (lab) => {
     const s = norm(lab);
-    const i = FORMACAO_RANK.findIndex((k) => s.includes(k));
-    return i < 0 ? 999 : i;
+    if (FORMACAO_RANK.has(s)) return FORMACAO_RANK.get(s);
+    const i = FORMACAO_FALLBACK.findIndex((k) => s.includes(k));
+    return i < 0 ? 998 : 100 + i;
   };
   if (meta.slug === 'formacao') {
     st.sortKey = 'label';
@@ -84,6 +110,17 @@ export async function render(el, slug) {
     st.sortKey = 'label';
     st.sortDir = 'desc';
   }
+
+  // Categorias com ordem própria (idade, tempo de casa, formação, jornada)
+  const ORDERED_SLUGS = ['faixa-etaria', 'tempo-usp', 'formacao', 'jornada'];
+  const compareLabels = (a, b) => {
+    if (meta.slug === 'formacao') return formacaoRank(a) - formacaoRank(b);
+    if (meta.slug === 'jornada') {
+      const d = jornadaRank(a) - jornadaRank(b);
+      return d !== 0 ? d : naturalCompare(a, b);
+    }
+    return naturalCompare(a, b);
+  };
 
   /* ------------------------------------------------------- população/vínculo */
   // "Função Estrutura" só existe para servidores ativos: mantém a leitura mesmo
@@ -445,14 +482,7 @@ export async function render(el, slug) {
       current: (a, b) => cur(b) - cur(a),
       delta: (a, b) => Math.abs(delta(b)) - Math.abs(delta(a)),
       pct: (a, b) => Math.abs(pct(b) ?? 0) - Math.abs(pct(a) ?? 0),
-      label: (a, b) => {
-        if (meta.slug === 'formacao') return formacaoRank(cat.labels[a]) - formacaoRank(cat.labels[b]);
-        if (meta.slug === 'jornada') {
-          const d = jornadaRank(cat.labels[a]) - jornadaRank(cat.labels[b]);
-          return d !== 0 ? d : naturalCompare(cat.labels[a], cat.labels[b]);
-        }
-        return naturalCompare(cat.labels[a], cat.labels[b]);
-      },
+      label: (a, b) => compareLabels(cat.labels[a], cat.labels[b]),
     }[st.sortKey];
     lis.sort(cmp);
     if (st.sortDir === 'asc') lis.reverse();
@@ -552,11 +582,7 @@ export async function render(el, slug) {
       })
       .filter((r) => r.a !== 0 || r.b !== 0)
       .sort((x, y) => {
-        if (meta.slug === 'tempo-usp' || meta.slug === 'faixa-etaria') {
-          return naturalCompare(cat.labels[x.li], cat.labels[y.li]);
-        }
-        if (meta.slug === 'formacao') return formacaoRank(cat.labels[x.li]) - formacaoRank(cat.labels[y.li]);
-        if (meta.slug === 'jornada') return jornadaRank(cat.labels[x.li]) - jornadaRank(cat.labels[y.li]);
+        if (ORDERED_SLUGS.includes(meta.slug)) return compareLabels(cat.labels[x.li], cat.labels[y.li]);
         return Math.abs(y.d) - Math.abs(x.d);
       });
 
@@ -611,6 +637,8 @@ export async function render(el, slug) {
       .map(([label, m]) => ({ label, m, total: codes.reduce((a, c) => a + (m[c] || 0), 0) }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 12);
+    // idade, tempo de casa, formação e jornada seguem a ordem natural da categoria
+    if (ORDERED_SLUGS.includes(meta.slug)) labels.sort((a, b) => compareLabels(a.label, b.label));
     const maxCell = Math.max(...labels.flatMap((l) => codes.map((c) => l.m[c] || 0)), 1);
 
     sec.innerHTML = `<div class="card">
