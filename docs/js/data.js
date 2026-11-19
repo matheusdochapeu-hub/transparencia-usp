@@ -119,10 +119,6 @@ export const store = {
     return POPS.find((p) => p.key === this.population) || POPS[0];
   },
 
-  get popLabel() {
-    return this.popInfo.label;
-  },
-
   get popLong() {
     return this.popInfo.long;
   },
@@ -130,29 +126,6 @@ export const store = {
   /** Métrica equivalente nas matrizes de categoria. */
   get metric() {
     return this.population === 'ativo' ? 'ativo' : this.population === 'apos' ? 'apos' : 'total';
-  },
-
-  /** Colunas de vínculo da população atual (opcionalmente por carreira). */
-  keys(vinculo = 'ambos') {
-    return populationKeys(this.population, vinculo);
-  },
-
-  /** Total da população em um mês (competência indexada). */
-  popTotal(ri, pop = this.population) {
-    if (this.isGlobal) {
-      const t = this.totals[ri] || [0, 0, 0, 0];
-      if (pop === 'ativo') return t[0] + t[1];
-      if (pop === 'apos') return t[2] + t[3];
-      return t[0] + t[1] + t[2] + t[3];
-    }
-    const rows = (this._scopeData.categories.categoria || {}).rows || [];
-    // o recorte traz uma linha por vínculo; soma as colunas correspondentes
-    let sum = 0;
-    for (const row of rows) {
-      if (row[0] !== ri) continue;
-      sum += pop === 'ativo' ? row[2] + row[3] : pop === 'apos' ? row[4] + row[5] : row[2] + row[3] + row[4] + row[5];
-    }
-    return sum;
   },
 
   async loadScope(key) {
