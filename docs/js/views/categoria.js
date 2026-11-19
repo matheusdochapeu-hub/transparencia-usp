@@ -216,6 +216,8 @@ export async function render(el, slug) {
   const lastI = n - 1;
   const firstI = 0;
   const present = presentLabels();
+  const docAtivo = cat.colTotals.doc[lastI];
+  const tecAtivo = cat.colTotals.tec[lastI];
 
   const groupName = () => (CLASS_GROUPS.find((g) => g.v === st.classeGrupo) || {}).label || '';
 
@@ -336,7 +338,7 @@ export async function render(el, slug) {
     ${
       isVinculo && population !== 'ativo'
         ? `<div class="card" style="margin-bottom:16px">
-            <div class="card-head"><div><h3>Servidores ativos</h3><p>Efetivo ativo (docentes + técnicos), independente da população escolhida no topo.</p></div></div>
+            <div class="card-head"><div><h3>Efetivo ativo</h3><p>${fmtInt(docAtivo)} docentes + ${fmtInt(tecAtivo)} servidores técnicos ativos, independente da população escolhida no topo.</p></div></div>
             <div class="stat-row">${activeStatsHTML()}</div>
           </div>`
         : ''
