@@ -13,6 +13,24 @@ const VINC_OPTS = [
   { v: 'doc', label: 'Docentes' },
   { v: 'tec', label: 'Servidores' },
 ];
+const CLASS_GROUPS = [
+  { v: 'todos', label: 'Todos' },
+  { v: 'prof', label: 'Professor' },
+  { v: 'bas', label: 'Básico' },
+  { v: 'tec', label: 'Técnico' },
+  { v: 'sup', label: 'Superior' },
+];
+/** Classifica o rótulo de Classe na carreira correspondente. */
+const classGroup = (label) => {
+  const s = norm(label);
+  if (/^profissional\s+sup/.test(s)) return 'sup';
+  if (/^profissional\s+tec/.test(s)) return 'tec';
+  if (/^prof(\s|\.|$)/.test(s)) return 'prof';
+  if (/^basico(\s|$)/.test(s)) return 'bas';
+  if (/^tec(nico)?(\s|$)/.test(s)) return 'tec';
+  if (/^superior(\s|$)/.test(s)) return 'sup';
+  return 'outros';
+};
 const CAMPUS_COL = { doc: 1, tec: 2, docApos: 3, tecApos: 4 };
 
 export async function render(el, slug) {
@@ -40,6 +58,7 @@ export async function render(el, slug) {
     sortDir: 'desc',
     q: '',
     vinculo: 'ambos',
+    classeGrupo: 'todos',
     cmpA: Math.max(0, n - 13),
     cmpB: n - 1,
     showAll: false,
@@ -137,16 +156,21 @@ export async function render(el, slug) {
     return `${role} ${suffix}`;
   };
 
+  function groupLabels() {
+    return cat.labels
+      .map((_, li) => li)
+      .filter((li) => st.classeGrupo === 'todos' || classGroup(cat.labels[li]) === st.classeGrupo);
+  }
+
   let _totKey = '';
   let _totArr = null;
   function tot() {
-    const k = currentKeys.join('+');
+    const k = currentKeys.join('+') + '|' + st.classeGrupo;
     if (k !== _totKey) {
       _totKey = k;
       _totArr = new Float64Array(n);
-      for (const key of currentKeys) {
-        const col = cat.colTotals[key];
-        for (let i = 0; i < n; i++) _totArr[i] += col[i];
+      for (const li of presentLabels()) {
+        for (let i = 0; i < n; i++) _totArr[i] += sumMetrics(cat, currentKeys, li, i);
       }
     }
     return _totArr;
@@ -155,17 +179,24 @@ export async function render(el, slug) {
   let _presentKey = '';
   let _present = null;
   function presentLabels() {
-    const k = currentKeys.join('+');
+    const k = currentKeys.join('+') + '|' + st.classeGrupo;
     if (k !== _presentKey) {
       _presentKey = k;
-      _present = cat.labels
-        .map((_, li) => li)
-        .filter((li) => {
-          for (let ri = 0; ri < n; ri++) if (sumMetrics(cat, currentKeys, li, ri)) return true;
-          return false;
-        });
+      _present = groupLabels().filter((li) => {
+        for (let ri = 0; ri < n; ri++) if (sumMetrics(cat, currentKeys, li, ri)) return true;
+        return false;
+      });
     }
     return _present.slice();
+  }
+
+  function otherPopulationTotal() {
+    if (isStructure || population === 'todos') return null;
+    const otherPop = population === 'ativo' ? 'apos' : 'ativo';
+    const keys = populationKeys(otherPop, isVinculo ? 'ambos' : st.vinculo);
+    let sum = 0;
+    for (const li of groupLabels()) sum += sumMetrics(cat, keys, li, n - 1);
+    return sum;
   }
 
   function raw(li, ri) {
@@ -183,21 +214,33 @@ export async function render(el, slug) {
 
   /* --------------------------------------------------------------- shell */
   const lastI = n - 1;
-  const curTot = tot()[lastI];
   const firstI = 0;
-  const deltaTotal = curTot - tot()[firstI];
   const present = presentLabels();
-  const nLabels = present.length;
-  const topLi = present.slice().sort((a, b) => raw(b, lastI) - raw(a, lastI))[0];
-  const topShare = topLi == null ? 0 : raw(topLi, lastI) / (curTot || 1);
-  const otherTot =
-    isStructure
-      ? null
-      : population === 'ativo'
-      ? cat.colTotals.apos[lastI]
-      : population === 'apos'
-      ? cat.colTotals.ativo[lastI]
-      : null;
+
+  const groupName = () => (CLASS_GROUPS.find((g) => g.v === st.classeGrupo) || {}).label || '';
+
+  function statsHTML() {
+    const cur = tot()[lastI];
+    const delta = cur - tot()[firstI];
+    const labels = presentLabels();
+    const top = labels.slice().sort((a, b) => raw(b, lastI) - raw(a, lastI))[0];
+    const share = top == null ? 0 : raw(top, lastI) / (cur || 1);
+    const other = otherPopulationTotal();
+    const totalLabel = isStructure
+      ? 'Servidores ativos (último mês)'
+      : `${esc(popTitle)}${st.classeGrupo === 'todos' ? '' : ` · ${esc(groupName())}`} (último mês)`;
+    return `
+      <div class="stat"><span class="s-label">${totalLabel}</span><span class="s-value">${fmtInt(cur)}</span></div>
+      <div class="stat"><span class="s-label">Variação desde ${esc(refs[firstI].label)}</span><span class="s-value">${fmtSigned(delta)} <span class="hint">(${fmtPct((delta / (tot()[firstI] || 1)) * 100)})</span></span></div>
+      <div class="stat"><span class="s-label">Valores distintos</span><span class="s-value">${fmtInt(labels.length)}</span></div>
+      <div class="stat"><span class="s-label">Maior valor em ${esc(refs[lastI].label)}</span><span class="s-value">${top == null ? '–' : esc(cat.labels[top])} <span class="hint">(${fmtPct(share * 100)})</span></span></div>
+      ${
+        other != null
+          ? `<div class="stat"><span class="s-label">${population === 'ativo' ? 'Aposentados' : 'Ativos'} no mesmo recorte</span><span class="s-value">${fmtInt(other)} <span class="hint">(${fmtPct((other / (cur + other || 1)) * 100)})</span></span></div>`
+          : ''
+      }
+      <div class="stat"><span class="s-label">Série</span><span class="s-value">${n} meses</span></div>`;
+  }
 
   const isPyramid = meta.slug === 'faixa-etaria' || meta.slug === 'tempo-usp';
   let pyramidRows = '';
@@ -274,18 +317,17 @@ export async function render(el, slug) {
         : ''
     }
     <div class="card" style="margin-bottom:16px">
-      <div class="stat-row">
-        <div class="stat"><span class="s-label">${isStructure ? 'Servidores ativos (último mês)' : `${esc(popTitle)} (último mês)`}</span><span class="s-value">${fmtInt(curTot)}</span></div>
-        <div class="stat"><span class="s-label">Variação desde ${esc(refs[firstI].label)}</span><span class="s-value">${fmtSigned(deltaTotal)} <span class="hint">(${fmtPct((deltaTotal / (tot()[firstI] || 1)) * 100)})</span></span></div>
-        <div class="stat"><span class="s-label">Valores distintos</span><span class="s-value">${fmtInt(nLabels)}</span></div>
-        <div class="stat"><span class="s-label">Maior valor em ${esc(refs[lastI].label)}</span><span class="s-value">${topLi == null ? '–' : esc(cat.labels[topLi])} <span class="hint">(${fmtPct(topShare * 100)})</span></span></div>
-        ${
-          otherTot != null
-            ? `<div class="stat"><span class="s-label">${population === 'ativo' ? 'Aposentados' : 'Ativos'} no mesmo recorte</span><span class="s-value">${fmtInt(otherTot)} <span class="hint">(${fmtPct((otherTot / (curTot + otherTot || 1)) * 100)})</span></span></div>`
-            : ''
-        }
-        <div class="stat"><span class="s-label">Série</span><span class="s-value">${n} meses</span></div>
-      </div>
+      <div class="stat-row" id="statRow">${statsHTML()}</div>
+      ${
+        meta.slug === 'classe'
+          ? `<div class="toolbar" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+              <span class="hint" style="font-weight:650">Filtrar classe:</span>
+              ${seg('classeGrupo', CLASS_GROUPS, st.classeGrupo)}
+              <div class="spacer"></div>
+              <span class="hint" id="classeFiltroInfo">${presentLabels().length} classes neste filtro</span>
+            </div>`
+          : ''
+      }
     </div>
 
     <div class="section" style="margin-top:0">
@@ -430,9 +472,10 @@ export async function render(el, slug) {
     const sub = el.querySelector('#chartSub');
     if (sub) {
       const winTxt = st.range === 'tudo' ? 'série completa' : st.range === '5a' ? 'últimos 5 anos' : 'últimos 10 anos';
+      const groupTxt = st.classeGrupo === 'todos' ? '' : ` · ${groupName()}`;
       sub.textContent = `${
         st.mode === 'share' ? 'Participação de cada valor dentro do total da categoria' : 'Contagem de servidores por valor da categoria'
-      } · ${scopeWords()} · ${winTxt}.`;
+      } · ${scopeWords()}${groupTxt} · ${winTxt}.`;
     }
 
     const legendBox = el.querySelector('#cLegend');
@@ -633,9 +676,10 @@ export async function render(el, slug) {
     for (const code of codes) {
       const rows = (cl.data[code] || {})[slug] || [];
       for (const row of rows) {
+        const label = row[0];
+        if (meta.slug === 'classe' && st.classeGrupo !== 'todos' && classGroup(label) !== st.classeGrupo) continue;
         const v = pick(row);
         if (!v) continue;
-        const label = row[0];
         if (!byLabel.has(label)) byLabel.set(label, {});
         byLabel.get(label)[code] = (byLabel.get(label)[code] || 0) + v;
       }
@@ -651,7 +695,7 @@ export async function render(el, slug) {
 
     sec.innerHTML = `<div class="card">
       <div class="card-head">
-        <div><h3>Por campus · ${esc(cl.label || cl.ref)}</h3><p>Distribuição de ${esc(scopeWords())} entre os campi. Disponível apenas para a competência mais recente da extração.</p></div>
+        <div><h3>Por campus · ${esc(cl.label || cl.ref)}</h3><p>Distribuição de ${esc(scopeWords())}${st.classeGrupo === 'todos' ? '' : ` · ${esc(groupName())}`} entre os campi. Disponível apenas para a competência mais recente da extração.</p></div>
       </div>
       <div class="table-wrap" style="max-height:none">
         <table class="data">
@@ -671,6 +715,16 @@ export async function render(el, slug) {
   }
 
   /* --------------------------------------------------------------- eventos */
+  function updateStats() {
+    const row = el.querySelector('#statRow');
+    if (row) row.innerHTML = statsHTML();
+    const info = el.querySelector('#classeFiltroInfo');
+    if (info) {
+      const count = presentLabels().length;
+      info.textContent = `${count} ${count === 1 ? 'classe' : 'classes'} neste filtro`;
+    }
+  }
+
   bindSegs(el, (key, v) => {
     if (key === 'mode') { st.mode = v; drawChart(); drawTable(); drawCompare(); }
     if (key === 'range') { st.range = v; drawChart(); }
@@ -681,6 +735,26 @@ export async function render(el, slug) {
       _presentKey = '';
       st.off.clear();
       st.focus = null;
+      updateStats();
+      drawChart();
+      drawTable();
+      drawCompare();
+      drawCampus();
+    }
+    if (key === 'classeGrupo') {
+      st.classeGrupo = v;
+      st.vinculo = 'ambos';
+      currentKeys = metricKeys();
+      _totKey = '';
+      _presentKey = '';
+      st.off.clear();
+      st.focus = null;
+      const vinculoSeg = el.querySelector('[data-seg="vinculo"]');
+      if (vinculoSeg) vinculoSeg.hidden = v !== 'todos';
+      el.querySelectorAll('[data-seg="vinculo"] button').forEach((b) => {
+        b.setAttribute('aria-pressed', String(b.dataset.v === 'ambos'));
+      });
+      updateStats();
       drawChart();
       drawTable();
       drawCompare();
@@ -701,16 +775,17 @@ export async function render(el, slug) {
   selB.addEventListener('change', () => { st.cmpB = Number(selB.value); drawCompare(); });
 
   const popSlug = isStructure ? 'ativo' : population;
+  const groupSlug = st.classeGrupo === 'todos' ? '' : `-${st.classeGrupo}`;
   el.querySelector('#dlTable')?.addEventListener('click', () => {
     const { cols, lis } = tableData();
     const header = ['valor', ...cols.map((ri) => refs[ri].label)];
     const rows = lis.map((li) => [cat.labels[li], ...cols.map((ri) => +value(li, ri).toFixed(3))]);
-    downloadFile(`usp-${slug}-${popSlug}-tabela.csv`, toCSV(header, rows));
+    downloadFile(`usp-${slug}-${popSlug}${groupSlug}-tabela.csv`, toCSV(header, rows));
   });
   el.querySelector('#dlCat')?.addEventListener('click', () => {
     const header = ['valor', ...refs.map((r) => r.label)];
     const rows = presentLabels().map((li) => [cat.labels[li], ...refs.map((_, ri) => raw(li, ri))]);
-    downloadFile(`usp-${slug}-${popSlug}-serie-completa.csv`, toCSV(header, rows));
+    downloadFile(`usp-${slug}-${popSlug}${groupSlug}-serie-completa.csv`, toCSV(header, rows));
   });
 
   drawChart();

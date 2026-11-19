@@ -26,7 +26,7 @@ ranking de mudanças e análise de correlações.
 | Área | Conteúdo |
 | --- | --- |
 | **Panorama** | KPIs do efetivo, evolução por vínculo, composição, maiores mudanças do mês e distribuição por campus |
-| **Categorias** | 11 recortes, cada um com evolução mensal, tabela comparativa por período e comparador de dois meses |
+| **Categorias** | 11 recortes, cada um com evolução mensal, tabela comparativa por período e comparador de dois meses. A categoria **Classe** tem filtros por carreira (**Professor, Básico, Técnico, Superior**) |
 | **Mudanças** | Ranking de todos os valores por variação (1 mês, 12 meses, 5 anos, série completa) |
 | **Vacância docente** | Cargos de **docente** (professor) autorizados vs. providos (**vago/provido**) por unidade e campus, 2014–2025. A USP não publica o mesmo dado para técnicos administrativos |
 | **Servidores** | Quadro efetivo da carreira técnico-administrativa por carreira (**Básico, Técnico, Superior**), **sexo** (2014–2025) e **raça/cor** (2020–2025), por unidade/campus |
