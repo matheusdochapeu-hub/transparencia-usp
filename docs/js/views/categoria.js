@@ -244,7 +244,7 @@ export async function render(el, slug) {
     ${
       meta.slug === 'jornada'
         ? `<div style="margin-bottom:16px">${notice(
-            '<b>Regimes docentes:</b> <b>RDIDP</b> — Regime de Dedicação Integral à Docência e à Pesquisa (40 horas semanais, com exclusividade); <b>RTC</b> — Regime de Turno Completo (24 horas); <b>RTP</b> — Regime de Tempo Parcial (12 horas). As demais linhas são jornadas em horas semanais.',
+            '<b>Regimes docentes:</b> <b>RDIDP</b> — Regime de Dedicação Integral à Docência e à Pesquisa (40 horas semanais, com exclusividade); <b>RTC</b> — Regime de Turno Completo (24 horas); <b>RTP</b> — Regime de Tempo Parcial (12 horas). As demais linhas são jornadas em horas semanais. Variações do <b>mesmo nome</b> (ex.: “12 horas”, “12 Horas”, “12 horas.”) foram unificadas; <b>RTP</b>, <b>RTC</b>, <b>RDIDP</b> e <b>12 x 36</b> são regimes distintos e permanecem separados.',
             'info'
           )}</div>`
         : ''

@@ -137,14 +137,28 @@ LABEL_ALIASES = {
         "nao informado": "Prefiro não informar",
         "preta": "Preta / negra",
         "indigena": "Indígena",
-    }
+    },
+    # variantes de caixa/pontuação da mesma jornada; nomes diferentes
+    # (RTP, RTC, RDIDP, 12 x 36 etc.) permanecem separados
+    "jornada": {
+        "08 horas": "08 horas",
+        "12 horas": "12 horas",
+        "20 horas": "20 Horas",
+        "24 horas": "24 Horas",
+        "25 horas": "25 Horas",
+        "30 horas": "30 Horas",
+        "36 horas": "36 Horas",
+        "40 horas": "40 Horas",
+        "44 horas": "44 Horas",
+    },
 }
 
 
 def label_key(text: str) -> str:
     s = unicodedata.normalize("NFD", (text or "").strip())
     s = "".join(c for c in s if unicodedata.category(c) != "Mn")
-    return re.sub(r"\s+", " ", s).lower()
+    s = re.sub(r"\s+", " ", s).lower()
+    return re.sub(r"[\s.,;:]+$", "", s)
 
 
 def canonical_label(slug: str, text: str) -> str:

@@ -218,6 +218,7 @@ docs/                PWA publicada no GitHub Pages
 - A série começa em Jul/2015 por limitação do portal.
 - Revisões retroativas feitas pela USP podem alterar meses antigos.
 - Rótulos equivalentes publicados pelo portal em períodos diferentes são unificados no build: em **Raça/Cor**, “Não informada”, “não informada” e “Não informado” entram em **“Prefiro não informar”**, “Preta” em **“Preta / negra”** e “Índigena” em **“Indígena”**.
+- Em **Jornada**, variações de caixa/pontuação do mesmo nome (“12 horas”, “12 Horas”, “12 horas.”) são unificadas; regimes com nomes distintos (**RTP**, **RTC**, **RDIDP**, **12 x 36**) permanecem separados.
 - “Função Estrutura” cobre apenas servidores ativos em funções de chefia/coordenação, por isso
   seu total é menor que o efetivo geral.
 - Correlações são exploratórias e não estabelecem causalidade.
