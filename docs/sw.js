@@ -1,6 +1,6 @@
 /* Service worker: app shell offline + dados com atualizaÃ§Ã£o em segundo plano. */
 
-const VERSION = 'v39';
+const VERSION = 'v40';
 const SHELL = `usp-shell-${VERSION}`;
 const DATA = `usp-data-${VERSION}`;
 
@@ -43,10 +43,24 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== SHELL && k !== DATA).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
+    (async () => {
+      const keys = await caches.keys();
+      // caches de versões anteriores indicam que esta é uma atualização
+      const oldVersion = keys.filter(
+        (k) => k !== SHELL && k !== DATA && (k.startsWith('usp-shell-') || k.startsWith('usp-data-'))
+      );
+      await Promise.all(keys.filter((k) => k !== SHELL && k !== DATA).map((k) => caches.delete(k)));
+      await self.clients.claim();
+
+      // Em atualizações, recarrega as abas abertas: sem isso o navegador pode
+      // continuar rodando o JS antigo por causa do cache do service worker.
+      if (oldVersion.length) {
+        const windows = await self.clients.matchAll({ type: 'window' });
+        windows.forEach((client) => {
+          if (client.url.startsWith(self.location.origin)) client.navigate(client.url).catch(() => {});
+        });
+      }
+    })()
   );
 });
 
@@ -99,6 +113,13 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(async () => (await caches.match('index.html')) || (await caches.match('./')) || Response.error())
     );
+    return;
+  }
+
+  // Código (JS/CSS) é sempre buscado na rede primeiro: atualizações do painel
+  // passam a valer no próximo carregamento, sem ficar presas no cache.
+  if (request.destination === 'script' || request.destination === 'style') {
+    event.respondWith(networkFirst(request, SHELL, 4000).catch(() => caches.match(request)));
     return;
   }
 
