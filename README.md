@@ -61,9 +61,11 @@ campus), lista e detalhe de categorias, comparador de períodos, ranking de muda
 correlações e exportações. Deep link: `?pop=apos` ou `?pop=todos`.
 
 Cada categoria mantém a coerência com a população escolhida — a soma dos valores equivale ao
-total do mês, exceto **Função Estrutura**, que só existe para servidores ativos. Os CSVs por
-categoria são publicados em três pastas (`docs/data/csv/` para todos, `csv/ativos/` e
-`csv/aposentados/`), e cada download feito nas telas já sai no recorte selecionado.
+total do mês, exceto **Função Estrutura**, que só existe para servidores ativos. Na categoria
+**Categoria** (vínculo), quando a população selecionada não é “Ativos”, aparece também um resumo
+fixo do **efetivo ativo** (docentes + técnicos) para comparação. Os CSVs por categoria são
+publicados em três pastas (`docs/data/csv/` para todos, `csv/ativos/` e `csv/aposentados/`), e
+cada download feito nas telas já sai no recorte selecionado.
 
 ## Importar a vacância de servidores (extrato do DRH)
 

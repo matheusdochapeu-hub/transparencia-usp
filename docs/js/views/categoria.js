@@ -219,6 +219,23 @@ export async function render(el, slug) {
 
   const groupName = () => (CLASS_GROUPS.find((g) => g.v === st.classeGrupo) || {}).label || '';
 
+  function activeStatsHTML() {
+    const col = cat.colTotals.ativo;
+    const cur = col[lastI];
+    const delta = cur - col[firstI];
+    const labels = cat.labels.map((_, li) => li).filter((li) => cat.m.ativo[li].some((v) => v > 0));
+    const top = labels.slice().sort((a, b) => cat.m.ativo[b][lastI] - cat.m.ativo[a][lastI])[0];
+    const share = top == null ? 0 : cat.m.ativo[top][lastI] / (cur || 1);
+    const apos = cat.colTotals.apos[lastI];
+    return `
+      <div class="stat"><span class="s-label">Total (último mês)</span><span class="s-value">${fmtInt(cur)}</span></div>
+      <div class="stat"><span class="s-label">Variação desde ${esc(refs[firstI].label)}</span><span class="s-value">${fmtSigned(delta)} <span class="hint">(${fmtPct((delta / (col[firstI] || 1)) * 100)})</span></span></div>
+      <div class="stat"><span class="s-label">Valores distintos</span><span class="s-value">${fmtInt(labels.length)}</span></div>
+      <div class="stat"><span class="s-label">Maior valor em ${esc(refs[lastI].label)}</span><span class="s-value">${top == null ? '–' : esc(cat.labels[top])} <span class="hint">(${fmtPct(share * 100)})</span></span></div>
+      <div class="stat"><span class="s-label">Aposentados no mesmo recorte</span><span class="s-value">${fmtInt(apos)} <span class="hint">(${fmtPct((apos / (cur + apos || 1)) * 100)})</span></span></div>
+      <div class="stat"><span class="s-label">Série</span><span class="s-value">${n} meses</span></div>`;
+  }
+
   function statsHTML() {
     const cur = tot()[lastI];
     const delta = cur - tot()[firstI];
@@ -314,6 +331,14 @@ export async function render(el, slug) {
             'O portal publicou variações do mesmo rótulo ao longo da série. Aqui, <b>“Não informada”</b>, <b>“não informada”</b>, <b>“Não informado”</b> e <b>“Prefiro não informar”</b> aparecem unificados em <b>“Prefiro não informar”</b>; <b>“Preta”</b> foi agrupada em <b>“Preta / negra”</b> e <b>“Índigena”</b> em <b>“Indígena”</b>.',
             'info'
           )}</div>`
+        : ''
+    }
+    ${
+      isVinculo && population !== 'ativo'
+        ? `<div class="card" style="margin-bottom:16px">
+            <div class="card-head"><div><h3>Servidores ativos</h3><p>Efetivo ativo (docentes + técnicos), independente da população escolhida no topo.</p></div></div>
+            <div class="stat-row">${activeStatsHTML()}</div>
+          </div>`
         : ''
     }
     <div class="card" style="margin-bottom:16px">
