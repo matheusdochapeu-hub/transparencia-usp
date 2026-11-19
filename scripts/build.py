@@ -18,6 +18,7 @@ import json
 import os
 import re
 import statistics
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timezone
 
@@ -124,6 +125,33 @@ def norm_label(text: str) -> str:
     text = (text or "").strip()
     text = re.sub(r"\s+", " ", text)
     return text or "Total"
+
+
+# O portal trocou o rótulo de algumas categorias ao longo da série. Estes
+# apelidos unificam variantes que significam a mesma coisa (chave sem acento,
+# minúscula e com espaços normalizados).
+LABEL_ALIASES = {
+    "raca-cor": {
+        "prefiro nao informar": "Prefiro não informar",
+        "nao informada": "Prefiro não informar",
+        "nao informado": "Prefiro não informar",
+        "preta": "Preta / negra",
+        "indigena": "Indígena",
+    }
+}
+
+
+def label_key(text: str) -> str:
+    s = unicodedata.normalize("NFD", (text or "").strip())
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    return re.sub(r"\s+", " ", s).lower()
+
+
+def canonical_label(slug: str, text: str) -> str:
+    """Rótulo final de uma categoria, aplicando os apelidos conhecidos."""
+    label = norm_label(text)
+    aliases = LABEL_ALIASES.get(slug)
+    return aliases.get(label_key(label), label) if aliases else label
 
 
 def detect_breaks(payload, min_change=10, min_jaccard=0.8):
@@ -442,7 +470,7 @@ def build_scopes() -> list[dict]:
                 else:
                     agg = defaultdict(lambda: [0, 0, 0, 0])
                     for row in rows:
-                        k = norm_label(row[0])
+                        k = canonical_label(slug, row[0])
                         v = agg[k]
                         v[0] += row[1]
                         v[1] += row[2]
@@ -622,7 +650,7 @@ def main():
             else:
                 agg = defaultdict(lambda: [0, 0, 0, 0])
                 for row in rows:
-                    key = norm_label(row.get("label"))
+                    key = canonical_label(slug, row.get("label"))
                     vals = agg[key]
                     vals[0] += int(row.get("doc") or 0)
                     vals[1] += int(row.get("tecAdm") or 0)
@@ -768,7 +796,7 @@ def main():
                     continue
                 agg = defaultdict(lambda: [0, 0, 0, 0])
                 for row in rows:
-                    key = norm_label(row.get("label"))
+                    key = canonical_label(slug, row.get("label"))
                     v = agg[key]
                     v[0] += int(row.get("doc") or 0)
                     v[1] += int(row.get("tecAdm") or 0)

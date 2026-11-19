@@ -265,6 +265,14 @@ export async function render(el, slug) {
           )}</div>`
         : ''
     }
+    ${
+      meta.slug === 'raca-cor'
+        ? `<div style="margin-bottom:16px">${notice(
+            'O portal publicou variações do mesmo rótulo ao longo da série. Aqui, <b>“Não informada”</b>, <b>“não informada”</b>, <b>“Não informado”</b> e <b>“Prefiro não informar”</b> aparecem unificados em <b>“Prefiro não informar”</b>; <b>“Preta”</b> foi agrupada em <b>“Preta / negra”</b> e <b>“Índigena”</b> em <b>“Indígena”</b>.',
+            'info'
+          )}</div>`
+        : ''
+    }
     <div class="card" style="margin-bottom:16px">
       <div class="stat-row">
         <div class="stat"><span class="s-label">${isStructure ? 'Servidores ativos (último mês)' : `${esc(popTitle)} (último mês)`}</span><span class="s-value">${fmtInt(curTot)}</span></div>
