@@ -86,7 +86,7 @@ export async function render(el) {
       eyebrow: `Anuário Estatístico · Tabelas 2.14, 2.16 e 2.20`,
       title: scoped ? `Servidores · ${esc(scopeName)}` : 'Servidores',
       lead: 'Quadro <b>efetivo</b> da carreira técnico-administrativa: <b>Básico</b>, <b>Técnico</b> e <b>Superior</b> (analistas), com composição por <b>sexo</b>, <b>raça/cor</b>, <b>faixa etária</b>, <b>nacionalidade</b> e <b>tempo USP</b>. A USP não publica cargos em vacância para esta carreira.',
-      actions: `<a class="btn" href="#/vacancia">Vacância (docentes)</a><a class="btn" href="${tec.sourceUrl}" target="_blank" rel="noopener">Fonte: Anuário USP ↗</a>`,
+      actions: `<a class="btn" href="#/vacancia">Vacância docente</a><a class="btn" href="${tec.sourceUrl}" target="_blank" rel="noopener">Fonte: Anuário USP ↗</a>`,
     })}
 
     <div class="section card" style="margin-bottom:14px">
@@ -345,7 +345,7 @@ export async function render(el) {
     el.querySelector('#tTable').innerHTML = `<table class="data">
       <thead><tr>
         <th class="sortable ${st.sort === 'sigla' ? 'sorted' : ''}" data-sort="sigla">Unidade</th>
-        ${scoped ? '' : '<th>Campus</th>'}
+        ${scoped ? '' : '<th class="col-campus">Campus</th>'}
         ${cols.map((c) => `<th class="sortable ${st.sort === c.key ? 'sorted' : ''}" data-sort="${c.key}">${esc(c.name)}</th>`).join('')}
         <th class="sortable ${st.sort === 'total' ? 'sorted' : ''}" data-sort="total">Total</th>
         <th class="sortable ${st.sort === 'd1' ? 'sorted' : ''}" data-sort="d1">Δ 1 ano</th>
@@ -356,7 +356,7 @@ export async function render(el) {
         .map(
           (r) => `<tr>
             <td title="${esc(r.name)}"><b>${esc(r.sigla)}</b>${r.name ? ` <span class="hint">${esc(r.name)}</span>` : ''}</td>
-            ${scoped ? '' : `<td class="dim">${esc(r.campus)}</td>`}
+            ${scoped ? '' : `<td class="dim col-campus">${esc(r.campus)}</td>`}
             ${cols.map((c) => `<td class="num">${fmtInt(r[c.key])}</td>`).join('')}
             <td class="num" style="font-weight:650;background:rgba(var(--heat-rgb),${(0.04 + (val(r) / maxV) * 0.3).toFixed(3)})">${fmtInt(val(r))}</td>
             <td class="num">${deltaCell(r.d1, r.base1)}</td>

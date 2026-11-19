@@ -283,7 +283,7 @@ export async function render(el) {
   function sortHeader(key) {
     const arrow = st.sort === key ? (st.sortDir === 'desc' ? ' ↓' : ' ↑') : ' ↕';
     const label = key === 'label' ? 'Valor' : key === 'cat' ? 'Categoria' : key === 'from' ? 'Antes' : key === 'to' ? 'Depois' : key === 'delta' ? 'Δ' : 'Δ%';
-    return `<th class="sortable ${st.sort === key ? 'sorted' : ''}" data-sort="${key}">${label}<span class="arrow">${arrow}</span></th>`;
+    return `<th class="sortable ${key === 'cat' ? 'cat-col' : ''} ${st.sort === key ? 'sorted' : ''}" data-sort="${key}">${label}<span class="arrow">${arrow}</span></th>`;
   }
 
   function drawTable() {
@@ -299,14 +299,14 @@ export async function render(el) {
       <tbody>${shown
         .map(
           (r) => `<tr>
-            <td title="${esc(r.label)}">${esc(r.label)}${
+            <td title="${esc(r.label)}"><span class="cell-label">${esc(r.label)}</span>${
               r.from === 0
                 ? ' <span class="badge" style="margin-left:6px">novo</span>'
                 : r.to === 0
                 ? ' <span class="badge" style="margin-left:6px;background:var(--panel-2);color:var(--muted);border-color:var(--line)">extinto</span>'
                 : ''
-            }</td>
-            <td class="dim"><a href="#/categoria/${r.slug}" style="color:inherit">${esc(shortCat(r.slug))}</a></td>
+            }<span class="cell-sub">${esc(shortCat(r.slug))}</span></td>
+            <td class="dim cat-col"><a href="#/categoria/${r.slug}" style="color:inherit">${esc(shortCat(r.slug))}</a></td>
             <td class="num" style="background:rgba(var(--heat-rgb),${(0.02 + (r.from / maxAbs) * 0.28).toFixed(3)})">${fmtInt(r.from)}</td>
             <td class="num" style="background:rgba(var(--heat-rgb),${(0.02 + (r.to / maxAbs) * 0.28).toFixed(3)})">${fmtInt(r.to)}</td>
             <td class="num">${r.delta > 0 ? `<span class="delta up">▲ ${fmtSigned(r.delta)}</span>` : `<span class="delta down">▼ ${fmtSigned(r.delta)}</span>`}</td>

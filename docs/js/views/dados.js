@@ -82,7 +82,7 @@ export async function render(el) {
       <div class="card-head"><div><h3>Totais por competência</h3><p>Ativos e aposentados aparecem em colunas próprias e em subtotais; a última coluna mostra a variação mensal da população selecionada (<b>${esc(popLong)}</b>).</p></div></div>
       <div class="table-wrap" style="max-height:60vh">
         <table class="data">
-          <thead><tr><th>Competência</th><th>Docentes ativos</th><th>Servidores ativos</th><th>Ativos</th><th>Doc. aposentados</th><th>Serv. aposentados</th><th>Aposentados</th><th>Total</th><th>Δ mês</th></tr></thead>
+          <thead><tr><th>Competência</th><th>Doc. ativos</th><th>Serv. ativos</th><th>Ativos</th><th>Doc. aposentados</th><th>Serv. aposentados</th><th>Aposentados</th><th>Total</th><th>Δ mês</th></tr></thead>
           <tbody>${body}</tbody>
         </table>
       </div>
@@ -91,7 +91,7 @@ export async function render(el) {
     <div class="section card">
       <div class="card-head"><div><h3>Dicionário de dados</h3></div></div>
       <div class="table-wrap" style="max-height:none">
-        <table class="data" style="font-size:.8rem">
+        <table class="data dict" style="font-size:.8rem">
           <thead><tr><th style="text-align:left">Campo</th><th style="text-align:left">Significado</th></tr></thead>
           <tbody style="text-align:left">
             <tr><td><code>competencia</code></td><td>Mês de referência publicado pelo portal (ex.: Out/2026).</td></tr>

@@ -15,7 +15,7 @@ export async function render(el) {
   const { index } = store;
   const vac = await store.vacancia();
   if (!vac) {
-    el.innerHTML = pageHead({ title: 'Vacância', lead: 'Dados indisponíveis.' });
+    el.innerHTML = pageHead({ title: 'Vacância docente', lead: 'Dados indisponíveis.' });
     return;
   }
 
@@ -28,30 +28,34 @@ export async function render(el) {
 
   el.innerHTML = `
     ${pageHead({
-      eyebrow: 'Anuário Estatístico · Tabela 2.08',
-      title: 'Cargos em vacância',
-      lead: 'Cargos de professor autorizados que estão <b>sem provimento</b>, por unidade e campus. É o estoque de vagas que a USP pode (ou não) converter em concurso — não confundir com concursos já abertos.',
+      eyebrow: 'Anuário Estatístico · Tabela 2.08 · Docentes',
+      title: 'Cargos docentes em vacância',
+      lead: '<b>Esta aba trata exclusivamente de cargos de DOCENTE (professor).</b> São cargos autorizados que estão <b>sem provimento</b>, por unidade e campus — o estoque de vagas que a USP pode (ou não) converter em concurso. Não confundir com concursos já abertos.',
       actions: `<a class="btn" href="${vac.sourceUrl}" target="_blank" rel="noopener">Fonte: Anuário USP ↗</a>`,
     })}
+    <div class="section" style="margin-top:0;margin-bottom:16px">${notice(
+      '<b>Somente docentes.</b> Os números desta aba são de <b>cargos de professor</b> (carreira docente), extraídos da Tabela 2.08 do Anuário Estatístico. A USP <b>não publica</b> cargos em vacância de <b>técnicos administrativos</b> — esse dado não existe publicamente. Para o quadro efetivo técnico-administrativo, veja a aba <a href="#/tecnicos">Servidores</a>.',
+      'warn'
+    )}</div>
 
     <div class="grid cols-4" style="margin-bottom:16px">
-      <div class="kpi" style="--kc:var(--c1)"><span class="k-label">Cargos docentes (${last})</span><span class="k-value">${fmtInt(total(T(last)))}</span><div class="k-foot"><span>inicial + final, todas as unidades</span></div></div>
-      <div class="kpi" style="--kc:var(--c3)"><span class="k-label">Em vacância</span><span class="k-value">${fmtInt(vagos(T(last)))}</span><div class="k-foot"><span>${fmtPct((vagos(T(last)) / (total(T(last)) || 1)) * 100)} dos cargos</span></div></div>
-      <div class="kpi" style="--kc:var(--c2)"><span class="k-label">Providos</span><span class="k-value">${fmtInt(providos(T(last)))}</span><div class="k-foot"><span>taxa de ocupação ${fmtPct((providos(T(last)) / (total(T(last)) || 1)) * 100)}</span></div></div>
-      <div class="kpi" style="--kc:var(--c4)"><span class="k-label">Variação da vacância</span><span class="k-value">${fmtSigned(vagos(T(last)) - vagos(T(first)))}</span><div class="k-foot"><span>desde ${first} (${fmtInt(vagos(T(first)))} → ${fmtInt(vagos(T(last)))})</span></div></div>
+      <div class="kpi" style="--kc:var(--c1)"><span class="k-label">Cargos de docente (${last})</span><span class="k-value">${fmtInt(total(T(last)))}</span><div class="k-foot"><span>inicial + final, todas as unidades</span></div></div>
+      <div class="kpi" style="--kc:var(--c3)"><span class="k-label">Cargos de docente vagos</span><span class="k-value">${fmtInt(vagos(T(last)))}</span><div class="k-foot"><span>${fmtPct((vagos(T(last)) / (total(T(last)) || 1)) * 100)} dos cargos docentes</span></div></div>
+      <div class="kpi" style="--kc:var(--c2)"><span class="k-label">Cargos docentes providos</span><span class="k-value">${fmtInt(providos(T(last)))}</span><div class="k-foot"><span>taxa de ocupação ${fmtPct((providos(T(last)) / (total(T(last)) || 1)) * 100)}</span></div></div>
+      <div class="kpi" style="--kc:var(--c4)"><span class="k-label">Variação da vacância docente</span><span class="k-value">${fmtSigned(vagos(T(last)) - vagos(T(first)))}</span><div class="k-foot"><span>desde ${first} (${fmtInt(vagos(T(first)))} → ${fmtInt(vagos(T(last)))})</span></div></div>
     </div>
 
     <div class="section split">
       <div class="card">
         <div class="card-head">
-          <div><h3>Evolução dos cargos</h3><p>Total autorizado, providos e vagos — anos de referência do Anuário.</p></div>
+          <div><h3>Evolução dos cargos docentes</h3><p>Total autorizado, providos e vagos de professor — anos de referência do Anuário.</p></div>
         </div>
         <div id="vChart"></div>
         <div class="legend" id="vLegend"></div>
       </div>
       <div class="card">
         <div class="card-head">
-          <div><h3>Vacância por campus</h3><p id="vYearLabel"></p></div>
+          <div><h3>Vacância docente por campus</h3><p id="vYearLabel"></p></div>
           <div class="spacer"></div>
           ${seg('year', years.slice(-6).map((y) => ({ v: String(y), label: String(y) })), last)}
         </div>
@@ -62,7 +66,7 @@ export async function render(el) {
 
     <div class="section card">
       <div class="card-head">
-        <div><h3>Por unidade</h3><p>Cargos inicial e final, vagos e providos. “RUSP” reúne os órgãos centrais (banco de cargos).</p></div>
+        <div><h3>Por unidade · cargos docentes</h3><p>Cargos de professor (inicial e final), vagos e providos. “RUSP” reúne os órgãos centrais (banco de cargos).</p></div>
         <div class="spacer"></div>
         <input type="search" id="vq" placeholder="Filtrar unidade…" style="width:200px" aria-label="Filtrar unidade">
         <button class="btn ghost" id="vcsv">CSV</button>
@@ -71,14 +75,14 @@ export async function render(el) {
     </div>
 
     <div class="section">${notice(
-      '<b>O que este dado é — e o que não é.</b> A USP publica anualmente, no Anuário Estatístico, quantos cargos de docente estão <b>vagos</b> (sem provimento) e <b>providos</b>, por unidade. Isso não indica que haverá concurso: a distribuição de cargos entre unidades e a abertura de editais seguem regras próprias (CAA/Reitoria). Para <b>técnicos administrativos</b> a USP não publica a mesma tabela — esse número existe apenas em sistemas internos (Banco de Cargos) e não é acessível publicamente.',
-      'warn'
+      '<b>O que este dado é — e o que não é.</b> A USP publica anualmente, no Anuário Estatístico, quantos cargos de <b>docente</b> estão <b>vagos</b> (sem provimento) e <b>providos</b>, por unidade. Isso não indica que haverá concurso: a distribuição de cargos entre unidades e a abertura de editais seguem regras próprias (CAA/Reitoria). Para <b>técnicos administrativos</b> a USP não publica a mesma tabela — esse número existe apenas em sistemas internos (Banco de Cargos) e não é acessível publicamente.',
+      'info'
     )}</div>
   `;
 
   // ---- gráfico de evolução
   const series = [
-    { name: 'Cargos autorizados', color: 'var(--muted)', values: years.map((y) => total(T(y))) },
+    { name: 'Cargos docentes autorizados', color: 'var(--muted)', values: years.map((y) => total(T(y))) },
     { name: 'Providos', color: 'var(--c2)', values: years.map((y) => providos(T(y))) },
     { name: 'Em vacância', color: 'var(--c3)', values: years.map((y) => vagos(T(y))) },
   ];
@@ -94,7 +98,7 @@ export async function render(el) {
 
   function drawCampus() {
     const y = st.year;
-    el.querySelector('#vYearLabel').textContent = `Cargos em vacância em ${y}`;
+    el.querySelector('#vYearLabel').textContent = `Cargos docentes em vacância em ${y}`;
     const items = Object.entries(vac.campus)
       .filter(([campus]) => campus !== 'Órgãos centrais (RUSP)')
       .map(([campus, byYear]) => ({ label: campus, value: vagos(byYear[y]), color: 'var(--c3)' }))
@@ -130,36 +134,36 @@ export async function render(el) {
     el.querySelector('#vTable').innerHTML = `<table class="data">
       <thead><tr>
         <th class="sortable ${st.sort === 'sigla' ? 'sorted' : ''}" data-sort="sigla">Unidade</th>
-        <th>Campus</th>
+        <th class="col-campus">Campus</th>
+        <th class="sortable ${st.sort === 'vagos' ? 'sorted' : ''}" data-sort="vagos">Total vagos</th>
+        <th class="sortable ${st.sort === 'ocup' ? 'sorted' : ''}" data-sort="ocup">Ocupação</th>
         <th class="sortable ${st.sort === 'iv' ? 'sorted' : ''}" data-sort="iv">Inicial vagos</th>
         <th>Inicial providos</th>
         <th class="sortable ${st.sort === 'fv' ? 'sorted' : ''}" data-sort="fv">Final vagos</th>
         <th>Final providos</th>
-        <th class="sortable ${st.sort === 'vagos' ? 'sorted' : ''}" data-sort="vagos">Total vagos</th>
-        <th class="sortable ${st.sort === 'ocup' ? 'sorted' : ''}" data-sort="ocup">Ocupação</th>
       </tr></thead>
       <tbody>${list
         .map(
           (r) => `<tr>
             <td title="${esc(r.name)}"><b>${esc(r.sigla)}</b>${r.name ? ` <span class="hint">${esc(r.name)}</span>` : ''}</td>
-            <td class="dim">${esc(r.campus)}</td>
+            <td class="dim col-campus">${esc(r.campus)}</td>
+            <td class="num" style="font-weight:650;background:rgba(var(--heat-rgb),${(0.04 + (r.vagos / maxV) * 0.34).toFixed(3)})">${fmtInt(r.vagos)}</td>
+            <td class="num">${r.total ? fmtPct(r.ocup * 100) : '–'}</td>
             <td class="num">${fmtInt(r.iv)}</td>
             <td class="num dim">${fmtInt(r.ip)}</td>
             <td class="num">${fmtInt(r.fv)}</td>
             <td class="num dim">${fmtInt(r.fp)}</td>
-            <td class="num" style="font-weight:650;background:rgba(var(--heat-rgb),${(0.04 + (r.vagos / maxV) * 0.34).toFixed(3)})">${fmtInt(r.vagos)}</td>
-            <td class="num">${r.total ? fmtPct(r.ocup * 100) : '–'}</td>
           </tr>`
         )
         .join('')}</tbody>
       <tfoot><tr>
-        <td>${list.length} unidades</td><td></td>
+        <td>${list.length} unidades</td><td class="col-campus"></td>
+        <td class="num">${fmtInt(list.reduce((a, r) => a + r.vagos, 0))}</td>
+        <td></td>
         <td class="num">${fmtInt(list.reduce((a, r) => a + r.iv, 0))}</td>
         <td class="num">${fmtInt(list.reduce((a, r) => a + r.ip, 0))}</td>
         <td class="num">${fmtInt(list.reduce((a, r) => a + r.fv, 0))}</td>
         <td class="num">${fmtInt(list.reduce((a, r) => a + r.fp, 0))}</td>
-        <td class="num">${fmtInt(list.reduce((a, r) => a + r.vagos, 0))}</td>
-        <td></td>
       </tr></tfoot>
     </table>`;
 
@@ -195,7 +199,7 @@ export async function render(el) {
 
   if (!serv) {
     extra.innerHTML = `<div class="card">
-      <div class="card-head"><div><h3>Vacância de servidores (técnico-administrativos)</h3><p>Aguardando extrato do DRH.</p></div></div>
+      <div class="card-head"><div><h3>Vacância de servidores técnico-administrativos</h3><p>Dado não publicado pela USP — aguardando extrato do DRH.</p></div></div>
       ${notice(
         'A USP <b>não publica</b> cargos em vacância desta carreira. Este painel já está preparado para exibi-los: basta importar um arquivo com uma linha por combinação — <code>competencia; unidade; campus; carreira; classe; letra; situacao; quantidade</code> — e rodar <code>python scripts/import_vacancia.py --input arquivo.csv</code>. Enquanto isso, veja a aba <a href="#/tecnicos">Servidores</a> (quadro efetivo) e <a href="#/movimento">Movimento</a> (saldo anual).',
         'warn'

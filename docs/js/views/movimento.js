@@ -45,7 +45,7 @@ export async function render(el) {
       eyebrow: 'Anuário Estatístico · Tabela 2.14',
       title: scoped ? `Movimento · ${esc(scopeName)}` : 'Movimento do quadro',
       lead: 'Saldo líquido anual do quadro técnico-administrativo: quem ganhou e quem perdeu servidores, e em que ano. <b>Não é vacância</b> — é a variação do efetivo entre anos.',
-      actions: `<a class="btn" href="#/tecnicos">Ver quadro atual</a><a class="btn" href="#/vacancia">Vacância (docentes)</a>`,
+      actions: `<a class="btn" href="#/tecnicos">Ver quadro atual</a><a class="btn" href="#/vacancia">Vacância docente</a>`,
     })}
 
     <div class="grid cols-4" style="margin-bottom:16px">
@@ -77,7 +77,7 @@ export async function render(el) {
     </div>
 
     <div class="section">${notice(
-      'O saldo é a diferença de efetivo entre anos consecutivos do Anuário (Tabela 2.14). Ele <b>não</b> mede vagas: um ano com 10 admissões e 10 saídas tem saldo zero. Para cargos em vacância de servidores a USP não publica dados — veja a aba Vacância (docentes).',
+      'O saldo é a diferença de efetivo entre anos consecutivos do Anuário (Tabela 2.14). Ele <b>não</b> mede vagas: um ano com 10 admissões e 10 saídas tem saldo zero. Para cargos em vacância de servidores a USP não publica dados — veja a aba Vacância docente.',
       'info'
     )}</div>
   `;
@@ -148,7 +148,7 @@ export async function render(el) {
     el.querySelector('#mTable').innerHTML = `<table class="data">
       <thead><tr>
         <th class="sortable ${st.sort === 'sigla' ? 'sorted' : ''}" data-sort="sigla">Unidade</th>
-        ${scoped ? '' : '<th>Campus</th>'}
+        ${scoped ? '' : '<th class="col-campus">Campus</th>'}
         <th class="sortable ${st.sort === 'total' ? 'sorted' : ''}" data-sort="total">Efetivo ${last}</th>
         <th class="sortable ${st.sort === 'd1' ? 'sorted' : ''}" data-sort="d1">Saldo 1 ano</th>
         <th class="sortable ${st.sort === 'd5' ? 'sorted' : ''}" data-sort="d5">Saldo 5 anos</th>
@@ -158,7 +158,7 @@ export async function render(el) {
         .map(
           (r) => `<tr>
             <td title="${esc(r.name)}"><b>${esc(r.sigla)}</b>${r.name ? ` <span class="hint">${esc(r.name)}</span>` : ''}</td>
-            ${scoped ? '' : `<td class="dim">${esc(r.campus)}</td>`}
+            ${scoped ? '' : `<td class="dim col-campus">${esc(r.campus)}</td>`}
             <td class="num">${fmtInt(r.total)}</td>
             <td class="num">${deltaCell(r.d1, r.base1)}</td>
             <td class="num">${deltaCell(r.d5, r.base5)}</td>
